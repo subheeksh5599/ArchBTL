@@ -602,6 +602,9 @@ export class WebviewManager {
     private getHtml(graph: WorkflowGraph, loadingOptions?: LoadingOptions): string {
         const webview = this.panel!.webview;
 
+        const config = vscode.workspace.getConfiguration('archbtl');
+        const apiUrl = config.get<string>('apiUrl', 'https://archbtl.onrender.com');
+
         // Generate nonce for CSP
         const nonce = this.getNonce();
 
@@ -647,6 +650,7 @@ export class WebviewManager {
     <script nonce="${nonce}">
         window.__GRAPH_DATA__ = ${graphJson};
         window.__LOADING_STATE__ = ${loadingState};
+        window.__API_URL__ = "${apiUrl}";
     </script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>`;

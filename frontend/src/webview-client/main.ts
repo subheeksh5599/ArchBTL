@@ -27,8 +27,8 @@ declare function acquireVsCodeApi(): any;
     // Get VSCode API
     const vscode = acquireVsCodeApi();
 
-    // Initialize notification queue
-    notifications.init('notificationQueue');
+    // Get API URL from window (injected by extension host)
+    const apiUrl = (window as any).__API_URL__ || 'https://archbtl.onrender.com';
 
     // Get graph data from window
     const graphData = (window as any).__GRAPH_DATA__;
@@ -154,7 +154,7 @@ declare function acquireVsCodeApi(): any;
             var q = searchInput.value.trim();
             if (!q) { if (searchResultsEl) { searchResultsEl.style.display = 'none'; searchResultsEl.innerHTML = ''; } return; }
             searchTimeout = setTimeout(function() {
-                fetch('http://localhost:52104/search', {
+                fetch(apiUrl + '/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: q, limit: 8 }),

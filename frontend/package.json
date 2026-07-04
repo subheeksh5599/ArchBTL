@@ -52,7 +52,7 @@
       "properties": {
         "archbtl.apiUrl": {
           "type": "string",
-          "default": "http://localhost:52104",
+          "default": "https://archbtl.onrender.com",
           "description": "Backend API URL"
         }
       }
