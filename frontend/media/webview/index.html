@@ -4,20 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}'; img-src {{cspSource}} data: blob:; font-src {{cspSource}};">
-    <title>LLM Architecture</title>
+    <title>ArchBTL</title>
     <script nonce="{{nonce}}" src="{{d3Uri}}"></script>
     <style>{{inlineStyles}}</style>
 </head>
 <body>
     <div id="header">
         <div class="header-left">
-            <svg class="codag-logo" viewBox="0 0 183.49023 48.22958" xmlns="http://www.w3.org/2000/svg">
-              <g transform="translate(-4.663109,-100.21196)">
-                <circle fill="currentColor" cx="12.989979" cy="136.37827" r="8.32687" />
-                <path fill="currentColor" d="m 23.348962,100.21197 c -1.884958,0 -3.402376,1.51742 -3.402376,3.40238 v 22.4131 c 0,1.88496 1.517418,3.40238 3.402376,3.40238 h 22.413103 c 1.884958,0 3.402376,-1.51742 3.402376,-3.40238 v -22.4131 c 0,-1.88496 -1.517418,-3.40238 -3.402376,-3.40238 z m 11.30267,6.39083 a 8.32687,8.32687 0 0 1 8.32714,8.32714 8.32687,8.32687 0 0 1 -8.32714,8.32662 8.32687,8.32687 0 0 1 -8.326624,-8.32662 8.32687,8.32687 0 0 1 8.326624,-8.32714 z" />
-                <path fill="currentColor" d="m 12.407616,130.60648 13.191254,-13.19125 6.269113,6.39971 -15.411566,15.41157 z" />
-                <text fill="currentColor" style="font-size:44.0158px;font-weight:bold;font-family:Damascus,system-ui,-apple-system,sans-serif" x="55.822399" y="131.09103" transform="scale(0.94435948,1.0589188)">codag</text>
+            <svg class="archbtl-logo" viewBox="0 0 220 48" xmlns="http://www.w3.org/2000/svg">
+              <g transform="translate(0,0)">
+                <rect fill="#38bdf8" x="0" y="6" width="36" height="36" rx="6" />
+                <text fill="#0f172a" x="10" y="32" style="font-size:22px;font-weight:700;font-family:DM Sans,system-ui">A</text>
               </g>
+              <text fill="#e2e8f0" x="48" y="34" style="font-size:28px;font-weight:600;font-family:DM Sans,system-ui">ArchBTL</text>
             </svg>
             <div id="snapshot" class="snapshot-stats">
                 <span class="stat-label"><span id="statWorkflows">0</span> workflows</span>
@@ -56,13 +55,13 @@
                 </svg>
             </div>
             <h2 class="error-overlay-title">Backend not running</h2>
-            <p class="error-overlay-desc">The Codag backend server is not reachable. This can happen if the server isn't started, or if the <code>GEMINI_API_KEY</code> is missing from <code>backend/.env</code>.</p>
+            <p class="error-overlay-desc">The BTL backend server is not reachable. This can happen if the server isn't started, or if the <code>BTL_API_KEY</code> is missing from <code>backend/.env</code>.</p>
             <div class="error-overlay-steps">
                 <div class="error-overlay-step">
                     <span class="error-overlay-step-num">1</span>
                     <span>Make sure <code>backend/.env</code> contains your API key:</span>
                 </div>
-                <code class="error-overlay-code">GEMINI_API_KEY=your-key-here</code>
+                <code class="error-overlay-code">BTL_API_KEY=your-key-here</code>
                 <div class="error-overlay-step">
                     <span class="error-overlay-step-num">2</span>
                     <span>Start the backend server:</span>
@@ -73,7 +72,7 @@
                     <code class="error-overlay-code">docker compose up -d</code>
                 </div>
             </div>
-            <p class="error-overlay-hint">The backend runs on <code>localhost:52104</code> by default. Change it in Settings &gt; Codag: API URL.</p>
+            <p class="error-overlay-hint">The backend runs on <code>localhost:52104</code> by default. Change it in Settings &gt; BTL: API URL.</p>
             <button id="btn-retry-backend" class="error-overlay-btn">Retry</button>
         </div>
     </div>
@@ -96,7 +95,7 @@
                     <span class="error-overlay-step-num">2</span>
                     <span>Update <code>backend/.env</code>:</span>
                 </div>
-                <code class="error-overlay-code">GEMINI_API_KEY=your-new-key-here</code>
+                <code class="error-overlay-code">BTL_API_KEY=your-new-key-here</code>
                 <div class="error-overlay-step">
                     <span class="error-overlay-step-num">3</span>
                     <span>Restart the backend:</span>

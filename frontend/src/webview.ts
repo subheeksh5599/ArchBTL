@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { WorkflowGraph } from './api';
 import { FileTreeNode } from './file-picker';
+import { CONFIG } from './config';
 
 export interface ViewState {
     selectedNodeId: string | null;
@@ -402,8 +403,8 @@ export class WebviewManager {
             tree,
             totalFiles,
             pricing: {
-                inputPer1M: 0.075,   // Gemini 2.5 Flash input cost
-                outputPer1M: 0.30,   // Gemini 2.5 Flash output cost
+                inputPer1M: CONFIG.PRICING.INPUT_PER_1M,
+                outputPer1M: CONFIG.PRICING.OUTPUT_PER_1M,
                 outputPerFile: 2000  // Estimated output tokens per file
             }
         });

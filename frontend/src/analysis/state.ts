@@ -58,7 +58,7 @@ export function incrementAnalysisSession(): number {
 
 const cachedCallGraphs = new Map<string, ExtractedCallGraph>();
 let extensionContext: { globalState: { get: (key: string) => any; update: (key: string, value: any) => Thenable<void> } } | null = null;
-const CALL_GRAPH_CACHE_KEY = 'codag.callGraphCache.v1';
+const CALL_GRAPH_CACHE_KEY = 'archbtl.callGraphCache.v1';
 
 /** Serializable format for ExtractedCallGraph */
 interface SerializedCallGraph {

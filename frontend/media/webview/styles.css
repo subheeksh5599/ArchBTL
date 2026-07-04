@@ -37,8 +37,8 @@
 }
 body {
     overflow: hidden;
-    background: var(--vscode-editor-background);
-    color: var(--vscode-editor-foreground);
+    background: #0f172a;
+    color: #e2e8f0;
     font-family: var(--vscode-font-family);
 }
 #header {

@@ -245,7 +245,7 @@ export async function analyzeSelectedFiles(
             const totalTokens = totalInputTokens + totalOutputTokens;
             const totalCost = calculateCost(totalInputTokens, totalOutputTokens);
             log(`  Tokens: ~${Math.round(totalInputTokens / 1000)}k input, ~${Math.round(totalOutputTokens / 1000)}k output (~${Math.round(totalTokens / 1000)}k total)`);
-            log(`  Est. cost: ${formatCost(totalCost)} (Gemini 2.5 Flash)`);
+            log(`  Est. cost: ${formatCost(totalCost)} (BTL Runtime)`);
             webview.notifyAnalysisComplete(true);
         } else {
             webview.notifyWarning('No workflow data found in selected files.');

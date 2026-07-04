@@ -29,8 +29,8 @@ export function setupSVG(): { svg: any; g: any; zoom: any; defs: any } {
         .attr('cx', 10)
         .attr('cy', 10)
         .attr('r', 1.5)
-        .attr('fill', 'var(--vscode-editor-foreground)')
-        .attr('opacity', 0.25);
+        .attr('fill', '#64748b')
+        .attr('opacity', 0.15);
 
     // Coarse pegboard dot pattern - 40px grid for zoomed out view
     const coarsePattern = defs.append('pattern')
@@ -46,8 +46,8 @@ export function setupSVG(): { svg: any; g: any; zoom: any; defs: any } {
         .attr('cx', 20)
         .attr('cy', 20)
         .attr('r', 2)
-        .attr('fill', 'var(--vscode-editor-foreground)')
-        .attr('opacity', 0.25);
+        .attr('fill', '#64748b')
+        .attr('opacity', 0.15);
 
     // Main group for all graph elements (zoomable, includes pegboard)
     const g = svg.append('g');

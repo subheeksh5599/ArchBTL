@@ -617,7 +617,7 @@ function prepareSVGForExport(bounds: { minX: number; minY: number; maxX: number;
     badgeBg.setAttribute('stroke-width', '1');
     badgeGroup.appendChild(badgeBg);
 
-    // Codag logo - use nested SVG to preserve exact viewBox/aspect ratio
+    // ArchBTL logo - use nested SVG to preserve exact viewBox/aspect ratio
     const logoColor = '#8b5cf6'; // Purple
     const logoSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     logoSvg.setAttribute('x', String(badgeX + badgePadding));
@@ -650,7 +650,7 @@ function prepareSVGForExport(bounds: { minX: number; minY: number; maxX: number;
     diagonal.setAttribute('fill', logoColor);
     logoG.appendChild(diagonal);
 
-    // "codag" text with original transform
+    // "archbtl" text with original transform
     const logoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     logoText.setAttribute('x', '55.822');
     logoText.setAttribute('y', '131.091');
@@ -659,7 +659,7 @@ function prepareSVGForExport(bounds: { minX: number; minY: number; maxX: number;
     logoText.setAttribute('font-family', '"DM Sans", system-ui, sans-serif');
     logoText.setAttribute('font-size', '44px');
     logoText.setAttribute('font-weight', '700');
-    logoText.textContent = 'codag';
+    logoText.textContent = 'archbtl';
     logoG.appendChild(logoText);
 
     logoSvg.appendChild(logoG);
@@ -828,7 +828,7 @@ export async function exportAllAsPNG(scale: number = 2): Promise<void> {
         const base64Data = await svgToBase64(svg, 'png', scale);
 
         const timestamp = new Date().toISOString().slice(0, 10);
-        await saveBase64Image(base64Data, `codag-workflow-${timestamp}.png`);
+        await saveBase64Image(base64Data, `archbtl-workflow-${timestamp}.png`);
     } catch (error) {
         console.error('Export failed:', error);
         showExportNotification('Export failed: ' + (error as Error).message, true);
@@ -850,7 +850,7 @@ export async function exportAllAsJPEG(scale: number = 2): Promise<void> {
         const base64Data = await svgToBase64(svg, 'jpeg', scale);
 
         const timestamp = new Date().toISOString().slice(0, 10);
-        await saveBase64Image(base64Data, `codag-workflow-${timestamp}.jpg`);
+        await saveBase64Image(base64Data, `archbtl-workflow-${timestamp}.jpg`);
     } catch (error) {
         console.error('Export failed:', error);
         showExportNotification('Export failed: ' + (error as Error).message, true);
@@ -873,7 +873,7 @@ export async function exportWorkflowAsPNG(groupId: string, groupName: string, sc
 
         // Sanitize filename
         const safeName = groupName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        await saveBase64Image(base64Data, `codag-${safeName}.png`);
+        await saveBase64Image(base64Data, `archbtl-${safeName}.png`);
     } catch (error) {
         console.error('Export failed:', error);
         showExportNotification('Export failed: ' + (error as Error).message, true);
@@ -896,7 +896,7 @@ export async function exportWorkflowAsJPEG(groupId: string, groupName: string, s
 
         // Sanitize filename
         const safeName = groupName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        await saveBase64Image(base64Data, `codag-${safeName}.jpg`);
+        await saveBase64Image(base64Data, `archbtl-${safeName}.jpg`);
     } catch (error) {
         console.error('Export failed:', error);
         showExportNotification('Export failed: ' + (error as Error).message, true);

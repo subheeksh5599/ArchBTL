@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { estimateTokens } from './cost-tracking';
 
-const SELECTION_CACHE_KEY = 'codag.fileSelection';
+const SELECTION_CACHE_KEY = 'archbtl.fileSelection';
 // Version 2: Changed from full paths to relative paths for consistency and security
 const SELECTION_CACHE_VERSION = 2;
 

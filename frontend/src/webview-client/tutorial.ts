@@ -12,14 +12,14 @@ interface TutorialStep {
 
 const TUTORIAL_STEPS: TutorialStep[] = [
     {
-        title: 'Welcome to Codag',
+        title: 'Welcome to ArchBTL',
         description: 'Visualize your AI/LLM workflows as interactive graphs. Let\'s take a quick tour.',
-        icon: `<svg class="tutorial-codag-logo" viewBox="0 0 183.49023 48.22958" xmlns="http://www.w3.org/2000/svg">
+        icon: `<svg class="tutorial-archbtl-logo" viewBox="0 0 183.49023 48.22958" xmlns="http://www.w3.org/2000/svg">
             <g transform="translate(-4.663109,-100.21196)">
                 <circle fill="currentColor" cx="12.989979" cy="136.37827" r="8.32687" />
                 <path fill="currentColor" d="m 23.348962,100.21197 c -1.884958,0 -3.402376,1.51742 -3.402376,3.40238 v 22.4131 c 0,1.88496 1.517418,3.40238 3.402376,3.40238 h 22.413103 c 1.884958,0 3.402376,-1.51742 3.402376,-3.40238 v -22.4131 c 0,-1.88496 -1.517418,-3.40238 -3.402376,-3.40238 z m 11.30267,6.39083 a 8.32687,8.32687 0 0 1 8.32714,8.32714 8.32687,8.32687 0 0 1 -8.32714,8.32662 8.32687,8.32687 0 0 1 -8.326624,-8.32662 8.32687,8.32687 0 0 1 8.326624,-8.32714 z" />
                 <path fill="currentColor" d="m 12.407616,130.60648 13.191254,-13.19125 6.269113,6.39971 -15.411566,15.41157 z" />
-                <text fill="currentColor" style="font-size:44.0158px;font-weight:bold;font-family:Damascus,system-ui,-apple-system,sans-serif" x="55.822399" y="131.09103" transform="scale(0.94435948,1.0589188)">codag</text>
+                <text fill="currentColor" style="font-size:44.0158px;font-weight:bold;font-family:Damascus,system-ui,-apple-system,sans-serif" x="55.822399" y="131.09103" transform="scale(0.94435948,1.0589188)">archbtl</text>
             </g>
         </svg>`
     },
@@ -53,7 +53,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     }
 ];
 
-const STORAGE_KEY = 'codag-tutorial-completed';
+const STORAGE_KEY = 'archbtl-tutorial-completed';
 
 class Tutorial {
     private overlay: HTMLElement | null = null;

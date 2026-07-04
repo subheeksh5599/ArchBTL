@@ -169,11 +169,11 @@ export function setupMessageHandler(): void {
                     const title = overlay.querySelector('.error-overlay-title');
                     const desc = overlay.querySelector('.error-overlay-desc');
                     if (message.reason === 'missing') {
-                        if (title) title.textContent = 'Gemini API key not found';
-                        if (desc) desc.innerHTML = 'Codag needs a Gemini API key to analyze your code. Create a <code>backend/.env</code> file with your key.';
+                        if (title) title.textContent = 'BTL API key not found';
+                        if (desc) desc.innerHTML = 'ArchBTL needs a BTL API key to analyze your code. Create a <code>backend/.env</code> file with your key.';
                     } else {
-                        if (title) title.textContent = 'Invalid Gemini API key';
-                        if (desc) desc.innerHTML = 'The Gemini API rejected the request. Your API key may be invalid or expired.';
+                        if (title) title.textContent = 'Invalid BTL API key';
+                        if (desc) desc.innerHTML = 'The BTL Runtime rejected the request. Your API key may be invalid or expired.';
                     }
                 }
                 showErrorOverlay('apiKeyError', 'btn-retry-apikey');

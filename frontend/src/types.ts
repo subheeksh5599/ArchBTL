@@ -1,4 +1,4 @@
-// Shared type definitions for Codag extension
+// Shared type definitions for ArchBTL extension
 
 // === Source Location ===
 export interface SourceLocation {

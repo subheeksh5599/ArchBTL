@@ -2,11 +2,11 @@
 
 setup:
 	@echo "Setting up backend..."
-	cd backend && python3.11 -m venv venv && \
+	cd backend && python3 -m venv venv && \
 		./venv/bin/pip install -r requirements.txt
 	@if [ ! -f backend/.env ]; then \
-		cp backend/.env.example backend/.env 2>/dev/null || echo "GEMINI_API_KEY=your-key-here" > backend/.env; \
-		echo "Created backend/.env - add your Gemini API key!"; \
+		cp backend/.env.example backend/.env 2>/dev/null || echo "BTL_API_KEY=your-key-here" > backend/.env; \
+		echo "Created backend/.env - add your BTL API key!"; \
 	fi
 	@echo "Setting up frontend..."
 	cd frontend && npm install && npm run compile
@@ -16,7 +16,7 @@ run:
 	@echo "Compiling frontend..."
 	cd frontend && npm run compile
 	@echo "Starting backend..."
-	@cd backend && ./venv/bin/python3.11 main.py > ../backend.log 2>&1 & echo $$! > ../backend.pid && \
+	@cd backend && ./venv/bin/python3 main.py > ../backend.log 2>&1 & echo $$! > ../backend.pid && \
 		echo "Backend running on port 52104 (PID: $$!)"
 	@sleep 2
 	@echo "Backend running on port 52104"

@@ -136,7 +136,7 @@ export async function analyzeWorkspace(
         if (workflowFiles.length === 0) {
             webview.notifyWarning(
                 `Found ${sourceFileCount} source files but no LLM/AI code detected. ` +
-                'Codag visualizes code using OpenAI, Anthropic, Gemini, etc.'
+                'ArchBTL visualizes code using OpenAI, Anthropic, BTL Runtime, etc.'
             );
             return;
         }

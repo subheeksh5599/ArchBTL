@@ -1,5 +1,5 @@
 /**
- * Cache Manager for Codag
+ * Cache Manager for ArchBTL
  *
  * Version 8: New node ID format with :: separator
  *
@@ -130,8 +130,8 @@ export class CacheManager {
 
         const workspaceFolder = workspaceFolders[0];
         const vscodeFolderPath = path.join(workspaceFolder.uri.fsPath, '.vscode');
-        this.cachePath = vscode.Uri.file(path.join(vscodeFolderPath, 'codag-cache.json'));
-        this.graphPath = vscode.Uri.file(path.join(vscodeFolderPath, 'codag-graph.json'));
+        this.cachePath = vscode.Uri.file(path.join(vscodeFolderPath, 'archbtl-cache.json'));
+        this.graphPath = vscode.Uri.file(path.join(vscodeFolderPath, 'archbtl-graph.json'));
 
         try {
             await vscode.workspace.fs.createDirectory(vscode.Uri.file(vscodeFolderPath));

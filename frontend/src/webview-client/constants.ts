@@ -31,7 +31,7 @@ export const GROUP_STROKE_WIDTH = 1.5;
 export const EDGE_STROKE_WIDTH = 2.8;
 export const EDGE_HOVER_STROKE_WIDTH = 3.5;
 export const EDGE_HOVER_HIT_WIDTH = 20;
-export const EDGE_COLOR_HOVER = '#00d9ff';
+export const EDGE_COLOR_HOVER = '#38bdf8';
 
 // ===== ANIMATIONS =====
 export const TRANSITION_FAST = 300;
@@ -53,17 +53,18 @@ export const MINIMAP_PADDING = 10;
 export const ARROW_HEAD_LENGTH = 8;
 
 // ===== TYPE COLORS =====
+// Monochrome slate palette — single accent (#38bdf8 sky-400) for BTL branding
 export const TYPE_COLORS: Record<string, string> = {
-    'trigger': '#FFB74D',      // Orange - entry points
-    'llm': '#1E88E5',          // Blue - LLM API calls (darker for contrast)
-    'tool': '#81C784',         // Green - functions/tools
-    'decision': '#BA68C8',     // Purple - conditional logic
-    'integration': '#FF8A65',  // Coral - external APIs
-    'memory': '#4DB6AC',       // Teal - state storage
-    'parser': '#A1887F',       // Brown - data transformation
-    'output': '#90A4AE',       // Gray - results/responses
-    'orchestrator': '#E040FB', // Magenta - coordinates multiple services
-    'agent': '#FF4081',        // Pink - autonomous AI agents
-    'retriever': '#7C4DFF',    // Deep purple - RAG/vector search
-    'guardrail': '#FFAB00'     // Amber - safety checks
+    'trigger': '#94a3b8',
+    'llm': '#38bdf8',
+    'tool': '#64748b',
+    'decision': '#475569',
+    'integration': '#334155',
+    'memory': '#1e293b',
+    'parser': '#475569',
+    'output': '#64748b',
+    'orchestrator': '#38bdf8',
+    'agent': '#94a3b8',
+    'retriever': '#64748b',
+    'guardrail': '#475569'
 };
