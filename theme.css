@@ -1,0 +1,43 @@
+/*
+ * ArchBTL theme tokens. Monochrome slate palette with sky accent.
+ *
+ * Conventions:
+ *   --foo       concrete color
+ *   --foo-rgb   "R, G, B" triplet for opacity composition: rgba(var(--foo-rgb), 0.4)
+ */
+
+:root {
+    /* --- Brand --- */
+    --accent: #38bdf8;
+    --accent-rgb: 56, 189, 248;
+    --accent-light: #7dd3fc;
+    --accent-light-rgb: 125, 211, 252;
+    --accent-glow-rgb: 56, 189, 248;
+
+    --cyan: #64748b;
+    --cyan-rgb: 100, 116, 139;
+    --cyan-soft-rgb: 148, 163, 184;
+    --violet-soft-rgb: 56, 189, 248;
+
+    --on-accent: #0f172a;
+
+    /* --- Status --- */
+    --error: #ef4444;
+    --error-rgb: 239, 68, 68;
+    --warning: #f59e0b;
+    --warning-bright: #f97316;
+    --slate: #475569;
+
+    /* --- Page --- */
+    --bg: #0f172a;
+    --bg-deep: #1e293b;
+    --bg-deep-rgb: 30, 41, 59;
+
+    /* --- Foreground / surfaces --- */
+    --fg: #e2e8f0;
+    --fg-strong-rgb: 226, 232, 240;
+    --surface: rgba(var(--accent-rgb), 0.05);
+    --surface-hover: rgba(var(--accent-rgb), 0.10);
+    --border: rgba(var(--fg-strong-rgb), 0.10);
+    --border-hover: rgba(var(--accent-rgb), 0.5);
+}

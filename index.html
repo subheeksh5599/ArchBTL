@@ -1,234 +1,983 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ArchBTL — LLM Architecture Visualizer</title>
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0f172a; color: #e2e8f0; font-family: 'DM Sans', system-ui, -apple-system, sans-serif; line-height: 1.6; }
-  @font-face { font-family: 'DM Sans'; src: url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap'); }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchBTL | LLM Architecture Visualizer</title>
+    <meta name="description" content="Visualize AI/LLM workflows in your codebase. Interactive DAG graphs powered by BTL Runtime.">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#38bdf8">
+    <link rel="canonical" href="https://archbtl.vercel.app/">
+    <!-- Search engine / AI grounding verification. Fill in once the accounts exist, or verify via DNS TXT in Cloudflare (no markup needed), then submit sitemap.xml in each tool.
+         Bing Webmaster Tools grounds ChatGPT Search and Microsoft Copilot:  <meta name="msvalidate.01" content="BING_VERIFICATION_ID">
+         Google Search Console feeds Gemini and AI Overviews:                <meta name="google-site-verification" content="GOOGLE_VERIFICATION_ID">
+         Also enable IndexNow in the Cloudflare dashboard so edits get recrawled within days. -->
+    <link rel="privacy-policy" href="#privacy">
+    <link rel="terms-of-service" href="#terms">
 
-  nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; max-width: 1200px; margin: 0 auto; }
-  .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; color: #e2e8f0; text-decoration: none; }
-  .logo-icon { width: 32px; height: 32px; background: #38bdf8; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #0f172a; font-weight: 700; font-size: 18px; }
-  .nav-links { display: flex; gap: 32px; align-items: center; }
-  .nav-links a { color: #94a3b8; text-decoration: none; font-size: 14px; transition: color 0.2s; }
-  .nav-links a:hover { color: #e2e8f0; }
-  .nav-cta { background: #38bdf8; color: #0f172a; padding: 8px 18px; border-radius: 6px; font-weight: 600; font-size: 14px; text-decoration: none; transition: opacity 0.2s; }
-  .nav-cta:hover { opacity: 0.9; }
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="ArchBTL | LLM Architecture Visualizer">
+    <meta property="og:description" content="Visualize AI/LLM workflows in your codebase. Interactive DAG graphs powered by BTL Runtime.">
+    <meta property="og:image" content="https://archbtl.vercel.app/socialpreview.png">
+    <meta property="og:url" content="https://archbtl.vercel.app">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ArchBTL | LLM Architecture Visualizer">
+    <meta name="twitter:description" content="Visualize AI/LLM workflows in your codebase. Interactive DAG graphs powered by BTL Runtime.">
+    <meta name="twitter:image" content="https://archbtl.vercel.app/socialpreview.png">
 
-  section { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300..700&amp;family=DM+Mono:wght@300;400;500&amp;family=Instrument+Sans:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,200..800&amp;family=B612+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
 
-  .hero { text-align: center; padding: 80px 40px 60px; }
-  .hero h1 { font-size: 56px; font-weight: 700; line-height: 1.1; margin-bottom: 20px; }
-  .hero h1 span { color: #38bdf8; }
-  .hero p { font-size: 18px; color: #94a3b8; max-width: 640px; margin: 0 auto 32px; }
-  .hero-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-  .btn-primary { background: #38bdf8; color: #0f172a; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; text-decoration: none; transition: opacity 0.2s; }
-  .btn-primary:hover { opacity: 0.9; }
-  .btn-secondary { background: transparent; color: #e2e8f0; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; text-decoration: none; border: 1px solid #334155; transition: border-color 0.2s; }
-  .btn-secondary:hover { border-color: #38bdf8; }
-  .hero-badge { display: inline-block; background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 6px 16px; font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
-  .hero-badge span { color: #38bdf8; }
+    <script src="/vendor/tailwindcss-cdn.js"></script>
+    <script>
+        tailwind.config = { theme: { extend: {
+            fontFamily: { display: ['Newsreader', 'serif'], body: ['Hanken Grotesk', 'sans-serif'], mono: ['B612 Mono', 'monospace'] },
+            colors: { accent: '#38bdf8', 'accent-light': '#7dd3fc', cyan: '#64748b' } /* keep in sync with theme.css */
+        }}}
+    </script>
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="styles.css">
 
-  .demo { text-align: center; padding: 0 40px 80px; }
-  .demo img { max-width: 100%; border-radius: 12px; border: 1px solid #1e293b; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    <style>
+        /* Home-only: dramatic stats header on compare card */
+        .compare-stats {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            border-bottom: 1px solid var(--border);
+        }
+        .compare-stat-cell { min-width: 0; }
+        @media (max-width: 720px) { .compare-stats { grid-template-columns: 1fr; } }
+        .compare-stat-cell {
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+        }
+        .compare-stat-cell.left {
+            border-right: 1px solid var(--border);
+            background: rgba(var(--error-rgb), 0.02);
+        }
+        @media (max-width: 720px) {
+            .compare-stat-cell.left { border-right: none; border-bottom: 1px solid var(--border); }
+        }
+        .compare-stat-cell.right { background: rgba(var(--accent-rgb), 0.04); }
+        .compare-stat-num {
+            font-family: 'Newsreader', serif;
+            font-weight: 400;
+            font-size: 1.55rem;
+            color: white;
+            line-height: 1;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+        }
+        .compare-stat-cell.left .compare-stat-num { color: rgba(var(--fg-strong-rgb), 0.92); }
+        .compare-stat-cell .compare-stat-num + div {
+            color: rgba(var(--fg-strong-rgb), 0.7) !important;
+            white-space: nowrap;
+            font-size: 0.7rem;
+        }
+        .compare-stat-cell { padding: 1.25rem 1.25rem; gap: 0.6rem; }
+        .compare-stat-label {
+            font-family: 'B612 Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0;
+            text-transform: none;
+            color: rgba(var(--fg-strong-rgb), 0.35);
+            text-align: right;
+        }
+        .compare-side { min-height: 280px; padding: 1.25rem 1.25rem; }
+        .log-fade {
+            margin-top: 0.6rem;
+            color: rgba(var(--fg-strong-rgb), 0.28);
+            font-style: italic;
+            font-size: 0.72rem;
+        }
+        /* ─── Two boxes joined only by a sideways figure-8 funnel that spans the full card ─── */
+        .compare-card.funnel-cut {
+            position: relative;
+            border: none;
+        }
+        .compare-card.funnel-cut .compare-stats {
+            border-bottom: none;
+        }
+        .compare-card.funnel-cut .compare-stats,
+        .compare-card.funnel-cut .compare-grid {
+            column-gap: 140px;
+        }
+        /* No rounding on the inner sides. The funnel attaches flush to the header and body edges. */
+        .compare-card.funnel-cut .compare-stat-cell.left,
+        .compare-card.funnel-cut .compare-side.left {
+            background: rgba(var(--accent-rgb), 0.07);
+            border: none;
+        }
+        .compare-card.funnel-cut .compare-stat-cell.right,
+        .compare-card.funnel-cut .compare-side.right {
+            background: rgba(var(--cyan-rgb), 0.05);
+            border: none;
+        }
+        /* Funnel container: absolutely positioned in the 140 px gap, spans the full card height. */
+        .compare-funnel {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: 140px;
+            z-index: 4;
+            pointer-events: none;
+        }
+        .compare-funnel svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+        /* Synchronized wave: a single light front traverses the figure-8, log → logo → output */
+        .compare-funnel svg .wave {
+            opacity: 0;
+            filter: blur(3.5px);
+        }
+        .compare-funnel svg .wave-l { fill: rgb(var(--violet-soft-rgb)); animation: waveTraverseL 2.5s ease-in-out infinite; }
+        .compare-funnel svg .wave-r { fill: rgb(var(--cyan-soft-rgb)); animation: waveTraverseR 2.5s ease-in-out infinite; }
 
-  .features { padding: 80px 40px; }
-  .section-label { text-align: center; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: #38bdf8; margin-bottom: 12px; }
-  .section-title { text-align: center; font-size: 36px; font-weight: 700; margin-bottom: 16px; }
-  .section-subtitle { text-align: center; color: #94a3b8; font-size: 16px; max-width: 560px; margin: 0 auto 48px; }
-  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
-  .feature-card { background: #1e293b; border: 1px solid #1e293b; border-radius: 12px; padding: 32px; transition: border-color 0.2s; }
-  .feature-card:hover { border-color: #334155; }
-  .feature-icon { width: 40px; height: 40px; background: #0f172a; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: #38bdf8; font-size: 20px; }
-  .feature-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-  .feature-card p { color: #64748b; font-size: 14px; }
+        @keyframes waveTraverseL {
+            0%       { transform: translateX(0);    opacity: 0; }
+            14%      { transform: translateX(0);    opacity: 0.13; }
+            38%      { transform: translateX(38px); opacity: 0.13; }
+            50%      { transform: translateX(38px); opacity: 0; }
+            100%     { transform: translateX(0);    opacity: 0; }
+        }
+        @keyframes waveTraverseR {
+            0%, 38%  { transform: translateX(0);    opacity: 0; }
+            50%      { transform: translateX(0);    opacity: 0.13; }
+            86%      { transform: translateX(38px); opacity: 0.13; }
+            100%     { transform: translateX(38px); opacity: 0; }
+        }
+        /* Mobile: vertical hourglass + wave glides top → bottom instead of left → right */
+        @keyframes waveTraverseLMobile {
+            0%       { transform: translateY(0);    opacity: 0; }
+            14%      { transform: translateY(0);    opacity: 0.13; }
+            38%      { transform: translateY(38px); opacity: 0.13; }
+            50%      { transform: translateY(38px); opacity: 0; }
+            100%     { transform: translateY(0);    opacity: 0; }
+        }
+        @keyframes waveTraverseRMobile {
+            0%, 38%  { transform: translateY(0);    opacity: 0; }
+            50%      { transform: translateY(0);    opacity: 0.13; }
+            86%      { transform: translateY(38px); opacity: 0.13; }
+            100%     { transform: translateY(38px); opacity: 0; }
+        }
+        /* Funnel SVG variants: desktop is horizontal, mobile is vertical */
+        .funnel-svg-desktop { display: block; }
+        .funnel-svg-mobile  { display: none; }
 
-  .providers { padding: 80px 40px; }
-  .provider-tags { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 800px; margin: 0 auto; }
-  .provider-tag { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 6px 14px; font-size: 13px; color: #94a3b8; }
+        @media (prefers-reduced-motion: reduce) {
+            .compare-funnel svg .wave { animation: none !important; opacity: 0; }
+        }
+        @media (max-width: 720px) {
+            /* Mobile reorder: each side's stat header sits ABOVE its body, with the funnel between.
+               display:contents flattens .compare-stats and .compare-grid so all 5 cells are direct
+               grid children of .compare-card and can be placed via grid-template-areas. */
+            .compare-card.funnel-cut {
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "stat-left"
+                    "side-left"
+                    "funnel"
+                    "stat-right"
+                    "side-right";
+                row-gap: 0;
+            }
+            .compare-card.funnel-cut .compare-stats,
+            .compare-card.funnel-cut .compare-grid {
+                display: contents;
+            }
+            .compare-card.funnel-cut .compare-stat-cell.left  { grid-area: stat-left; }
+            .compare-card.funnel-cut .compare-side.left       { grid-area: side-left; }
+            .compare-card.funnel-cut .compare-funnel          { grid-area: funnel; }
+            .compare-card.funnel-cut .compare-stat-cell.right { grid-area: stat-right; }
+            .compare-card.funnel-cut .compare-side.right      { grid-area: side-right; }
+            .compare-funnel {
+                position: relative;
+                left: auto; right: auto; top: auto; bottom: auto;
+                width: auto;
+                height: 140px;
+                transform: none;
+            }
+            .funnel-svg-desktop { display: none; }
+            .funnel-svg-mobile  { display: block; }
+            .compare-funnel svg .wave-l { animation-name: waveTraverseLMobile; }
+            .compare-funnel svg .wave-r { animation-name: waveTraverseRMobile; }
+        }
+        /* The archbtl logo sits at the pinch point */
+        .archbtl-logo {
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            width: 56px;
+            height: 56px;
+            display: block;
+            z-index: 5;
+        }
+        .archbtl-cap {
+            position: absolute;
+            left: 50%;
+            top: calc(50% + 36px);
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 5;
+            line-height: 1.15;
+        }
+        .archbtl-cap .num {
+            display: block;
+            font-family: 'Newsreader', serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: rgba(var(--fg-strong-rgb), 0.85);
+            letter-spacing: -0.01em;
+        }
+        .archbtl-cap .lbl {
+            display: block;
+            font-family: 'B612 Mono', monospace;
+            font-size: 0.62rem;
+            color: rgba(var(--fg-strong-rgb), 0.4);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-top: 0.18rem;
+        }
 
-  .how { padding: 80px 40px; }
-  .pipeline { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; max-width: 900px; margin: 0 auto; }
-  .pipeline-step { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 24px; flex: 1; min-width: 180px; text-align: center; }
-  .pipeline-step .step-num { color: #38bdf8; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-  .pipeline-step h4 { font-size: 15px; margin-bottom: 4px; }
-  .pipeline-step p { color: #64748b; font-size: 13px; }
-  .pipeline-arrow { display: flex; align-items: center; color: #38bdf8; font-size: 24px; }
+        /* Log marquee: fills the full panel height without driving panel height. */
+        .compare-side.left { display: flex; flex-direction: column; }
+        .log-stream {
+            flex: 1 1 0;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%);
+                    mask-image: linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%);
+        }
+        .log-stream-inner {
+            animation: streamUp 80s linear infinite;
+            will-change: transform;
+        }
+        .log-stream:hover .log-stream-inner { animation-play-state: paused; }
+        @keyframes streamUp {
+            from { transform: translate3d(0, 0, 0); }
+            to   { transform: translate3d(0, -50%, 0); }
+        }
+        .compare-side.left .log-line { padding: 0.06rem 0; font-size: 0.62rem; }
 
-  .btl-usage { padding: 80px 40px; }
-  .endpoint-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
-  .endpoint-card { background: #1e293b; border: 1px solid #1e293b; border-radius: 12px; padding: 28px; transition: border-color 0.2s; }
-  .endpoint-card:hover { border-color: #334155; }
-  .endpoint-method { display: inline-block; background: #38bdf8; color: #0f172a; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 12px; }
-  .endpoint-path { font-family: 'Hack Nerd Font Mono', monospace; color: #e2e8f0; font-size: 14px; margin-bottom: 8px; word-break: break-all; }
-  .endpoint-card p { color: #64748b; font-size: 14px; }
+        /* Respect motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            .log-stream-inner { animation: none !important; }
+        }
+    </style>
 
-  .cta { text-align: center; padding: 80px 40px 100px; }
-  .cta h2 { font-size: 36px; font-weight: 700; margin-bottom: 16px; }
-  .cta p { color: #94a3b8; margin-bottom: 32px; }
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://archbtl.vercel.app/#organization",
+          "name": "ArchBTL",
+          "legalName": "ArchBTL Inc.",
+          "url": "https://archbtl.vercel.app/",
+          "logo": "https://archbtl.vercel.app/archbtl-logo.png",
+          "email": "michael@archbtl.vercel.app",
+          "description": "ArchBTL compresses infrastructure log data into structured, schema-valid incident summaries that AI agents can actually read.",
+          "foundingLocation": {
+            "@type": "Place",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "San Francisco",
+              "addressRegion": "CA",
+              "addressCountry": "US"
+            }
+          },
+          "sameAs": [
+            "https://github.com/michaelzixizhou/archbtl",
+            "https://twitter.com/michaelzixizhou"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://archbtl.vercel.app/#website",
+          "url": "https://archbtl.vercel.app/",
+          "name": "ArchBTL",
+          "description": "Drop-in LLM architecture for any LLM that reasons over infrastructure logs.",
+          "publisher": { "@id": "https://archbtl.vercel.app/#organization" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://archbtl.vercel.app/#software",
+          "name": "ArchBTL",
+          "applicationCategory": "DeveloperApplication",
+          "applicationSubCategory": "LLM Architecture for AI agents",
+          "operatingSystem": "macOS, Linux, Windows",
+          "url": "https://archbtl.vercel.app/",
+          "downloadUrl": "https://github.com/subheeksh5599/ArchBTL",
+          "softwareHelp": "https://github.com/michaelzixizhou/archbtl",
+          "publisher": { "@id": "https://archbtl.vercel.app/#organization" },
+          "description": "Drop-in LLM architecture for any LLM that reasons over infrastructure logs. Cuts huge log windows down to the lines that matter, schema-valid, in seconds, so an agent gets the same answer at a fraction of the tokens. MCP-compatible, works with Claude, GPT, Gemini, and local models.",
+          "featureList": [
+            "Cuts huge log windows down to the lines that matter, schema-valid",
+            "Sub-second warm path on cache hits",
+            "MCP server, CLI, and REST API",
+            "PII redaction before storage",
+            "Works with any line-oriented log format (JSON, syslog, K8s, Spark, HDFS)"
+          ],
+          "offers": {
+            "@type": "AggregateOffer",
+            "priceCurrency": "USD",
+            "lowPrice": "0",
+            "offerCount": "4",
+            "url": "https://archbtl.vercel.app/pricing"
+          }
+        }
+      ]
+    }
+    </script>
 
-  footer { border-top: 1px solid #1e293b; padding: 40px; text-align: center; }
-  footer p { color: #475569; font-size: 13px; }
-  footer a { color: #94a3b8; text-decoration: none; }
-  footer a:hover { color: #e2e8f0; }
-  .footer-links { display: flex; gap: 24px; justify-content: center; margin-bottom: 16px; }
-
-  @media (max-width: 768px) {
-    .hero h1 { font-size: 36px; }
-    nav { flex-direction: column; gap: 16px; }
-    .nav-links { flex-wrap: wrap; justify-content: center; gap: 16px; }
-    .pipeline { flex-direction: column; }
-    .pipeline-arrow { transform: rotate(90deg); }
-  }
-</style>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is ArchBTL?", "acceptedAnswer": { "@type": "Answer", "text": "ArchBTL is a developer tool that compresses infrastructure logs so AI agents can read them. It cuts a huge log window down to the few lines that matter, schema-valid, in seconds, so your agent gets the same answer at a fraction of the tokens." } },
+        { "@type": "Question", "name": "How is ArchBTL different from raw logs or Drain3?", "acceptedAnswer": { "@type": "Answer", "text": "ArchBTL keeps every line that matters and tags it by its role in the incident, with a pointer to the real log line number. Nothing is summarized away and nothing is invented. It is benchmarked against Drain3 and a raw-logs control on LogHub-2.0 with a blind-judge agent-diagnosis evaluation." } },
+        { "@type": "Question", "name": "Does ArchBTL replace my LLM?", "acceptedAnswer": { "@type": "Answer", "text": "No. ArchBTL sits in front of your LLM. Send raw logs to ArchBTL, get back just the lines that matter as schema-valid JSON, then pass that to whatever agent you already use: Claude, GPT, Gemini, or a local model." } },
+        { "@type": "Question", "name": "Which log formats does ArchBTL support?", "acceptedAnswer": { "@type": "Answer", "text": "Anything line-oriented: JSON logs, syslog, framework-specific formats like Hadoop, Spark, HDFS, and Kubernetes, and unstructured application logs. Preprocessing handles parsing and PII redaction before templating." } },
+        { "@type": "Question", "name": "How much does ArchBTL cost?", "acceptedAnswer": { "@type": "Answer", "text": "ArchBTL is free forever on the Free plan, which includes 50 MB per month. Paid plans start at $19 per month for Hobby and $199 per month plus usage for Team. Pricing is by compute, not seats." } }
+      ]
+    }
+    </script>
 </head>
-<body>
 
-<nav>
-  <a href="/" class="logo">
-    <div class="logo-icon">A</div>
-    ArchBTL
-  </a>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#how">How It Works</a>
-    <a href="#btl">BTL Runtime</a>
-    <a href="https://github.com/subheeksh5599/ArchBTL">GitHub</a>
-    <a href="https://github.com/subheeksh5599/ArchBTL#readme" class="nav-cta">Get Started</a>
-  </div>
-</nav>
+<body class="font-body text-white min-h-screen">
+    <canvas id="circuit-bg"></canvas>
+    <div class="grain"></div>
 
-<section class="hero">
-  <div class="hero-badge"><span>New</span> BTL Runtime Hackathon 2026</div>
-  <h1>See <span>every AI call chain</span><br>in your codebase.</h1>
-  <p>ArchBTL scans your code, finds every LLM call, and renders interactive DAG graphs inside VSCode. Understand your AI architecture in seconds, not days.</p>
-  <div class="hero-buttons">
-    <a href="https://github.com/subheeksh5599/ArchBTL" class="btn-primary">View on GitHub</a>
-    <a href="https://github.com/subheeksh5599/ArchBTL#quick-start" class="btn-secondary">Install & Run</a>
-  </div>
-</section>
+    <!-- ==================== NAV ==================== -->
+    <nav class="site-nav fixed top-0 left-0 right-0 z-50 hidden md:block">
+        <div class="max-w-7xl mx-auto px-6 sm:px-8 flex items-center justify-between h-14">
+            <div class="flex items-center gap-9">
+                <a href="/" class="flex items-center">
+                    <img src="/archbtl-logo.svg" alt="ArchBTL" class="h-9">
+                </a>
+                <div class="flex items-center gap-6 text-sm">
+                    <div class="nav-group">
+                        <button class="nav-link nav-trigger" type="button">Product
+                            <svg class="chev" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l3 3 3-3"/></svg>
+                        </button>
+                        <div class="nav-dropdown">
+                            <a href="/">Overview</a>
+                            <a href="/benchmarks.html">Benchmarks</a>
+                        </div>
+                    </div>
+                    <a href="/open-source.html" class="nav-link">Open Source</a>
+                    <a href="/vision.html" class="nav-link">Vision</a>
+                    <a href="/blog.html" class="nav-link">Blog</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+                <a href="#" class="btn-primary px-3 py-1.5 rounded-sm text-white font-medium text-sm whitespace-nowrap">Sign in</a>
+            </div>
+        </div>
+    </nav>
+    <div class="md:hidden fixed top-4 left-4 right-4 z-50 flex items-center justify-between">
+        <a href="/" class="flex items-center"><img src="/archbtl-logo.svg" alt="ArchBTL" class="h-9"></a>
+        <div class="flex items-center gap-2">
+            <a href="#" class="btn-primary px-2.5 py-1 rounded-sm text-white font-medium text-xs">Sign in</a>
+            <button id="mobile-menu-btn" aria-label="Menu" class="p-2 text-white/80">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>
+            </button>
+        </div>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden">
+        <a href="/">Overview</a>
+        <a href="/benchmarks.html">Benchmarks</a>
+        <a href="/open-source.html">Open Source</a>
+        <a href="/vision.html">Vision</a>
+        <a href="/blog.html">Blog</a>
+        <a href="#">Sign in</a>
+    </div>
 
-<section class="demo">
-  <img src="https://raw.githubusercontent.com/subheeksh5599/ArchBTL/main/media/demo.png" alt="ArchBTL in VSCode" onerror="this.style.display='none'">
-</section>
+    <!-- ==================== HERO ==================== -->
+    <section class="relative min-h-[78vh] flex flex-col justify-center px-6 sm:px-8 py-20 md:py-24 overflow-hidden">
+        <div class="hero-glow"></div>
+        <div class="hero-glow-cyan"></div>
 
-<section class="features" id="features">
-  <div class="section-label">Features</div>
-  <h2 class="section-title">Understand your AI pipeline</h2>
-  <p class="section-subtitle">Stop tracing LLM calls through 40 files manually. ArchBTL maps your entire AI architecture in one view.</p>
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="feature-icon">&#9889;</div>
-      <h3>Auto-detected workflows</h3>
-      <p>Entry points, LLM API calls, routing decisions, and outputs — all found automatically. Zero configuration needed.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128269;</div>
-      <h3>50+ LLM providers detected</h3>
-      <p>OpenAI, Anthropic, BTL Runtime, Gemini, Ollama, LlamaCpp, MCP servers, LangChain, CrewAI, and 40+ more.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#8599;</div>
-      <h3>Click-to-source navigation</h3>
-      <p>Every graph node links to the exact function and line in your source code. Click a node, jump to the file.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128260;</div>
-      <h3>Live updates on save</h3>
-      <p>Edit a file, save it, and the graph updates instantly. Changed nodes get a visual pulse so you see what moved.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128279;</div>
-      <h3>Service-to-service edges</h3>
-      <p>HTTP connections between services traced automatically. Frontend to backend to model — one connected graph.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#129302;</div>
-      <h3>MCP server included</h3>
-      <p>Auto-registers an MCP server so AI coding agents can query your workflow graph. Works with Cursor, Claude Code, and more.</p>
-    </div>
-  </div>
-</section>
+        <div class="w-full max-w-7xl mx-auto grid lg:grid-cols-[2fr_3fr] gap-10 lg:gap-6 items-center">
+            <!-- LEFT: hero text -->
+            <div class="text-left min-w-0">
+                <p class="font-mono text-xs md:text-sm text-accent-light mb-6 hero-fade-1">LLM workflow visualization</p>
+                <h1 class="font-display font-[400] tracking-tight mb-6 hero-slide-left text-3xl sm:text-3xl md:text-4xl lg:text-5xl text-white leading-[1.25]">
+                    95% fewer log tokens<br><span class="accent-text">Same debugging signal</span>
+                </h1>
+                <div class="copy-cmd hero-fade-2 text-xs sm:text-sm">
+                    <code><span class="prompt">$</span>curl -fsSL https://github.com/subheeksh5599/ArchBTL | sh</code>
+                    <button type="button" class="copy-icon" data-copy-text="curl -fsSL https://github.com/subheeksh5599/ArchBTL | sh" aria-label="Copy install command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+                </div>
+                <p class="hero-fade-2 mt-3 font-mono text-xs sm:text-sm text-accent-light">Free tier forever.</p>
+            </div>
 
-<section class="providers">
-  <div class="section-label">Detection coverage</div>
-  <h2 class="section-title">Detects every major AI stack</h2>
-  <p class="section-subtitle">10+ languages. 50+ LLM providers. Every major AI framework.</p>
-  <div class="provider-tags">
-    <span class="provider-tag">OpenAI</span><span class="provider-tag">Anthropic</span><span class="provider-tag">BTL Runtime</span><span class="provider-tag">Gemini</span><span class="provider-tag">Ollama</span><span class="provider-tag">Cohere</span><span class="provider-tag">Hugging Face</span><span class="provider-tag">xAI Grok</span><span class="provider-tag">Mistral</span><span class="provider-tag">Together AI</span><span class="provider-tag">Replicate</span><span class="provider-tag">Bedrock</span><span class="provider-tag">Azure OpenAI</span><span class="provider-tag">DeepSeek</span><span class="provider-tag">OpenRouter</span><span class="provider-tag">LlamaCpp/GGUF</span><span class="provider-tag">LangChain</span><span class="provider-tag">LangGraph</span><span class="provider-tag">Mastra</span><span class="provider-tag">CrewAI</span><span class="provider-tag">LlamaIndex</span><span class="provider-tag">AutoGen</span><span class="provider-tag">Haystack</span><span class="provider-tag">PydanticAI</span><span class="provider-tag">MCP (JS/TS/Python/Go/Rust)</span>
-  </div>
-</section>
+            <!-- RIGHT: proof, 1.2M lines to the lines that matter -->
+            <div class="hero-fade-3 relative w-full mt-6 lg:mt-8">
+            <div class="compare-card funnel-cut">
+                <!-- Stats header -->
+                <div class="compare-stats">
+                    <div class="compare-stat-cell left">
+                        <div>
+                            <div class="compare-stat-num">26.6M tokens</div>
+                            <div class="text-xs text-gray-500 mt-1">1,200,000 lines · 108 MB</div>
+                        </div>
+                        <div class="compare-stat-label">raw logs<br>1 hour window</div>
+                    </div>
+                    <div class="compare-stat-cell right">
+                        <div>
+                            <div class="compare-stat-num accent-text">3,317 tokens</div>
+                            <div class="text-xs text-gray-500 mt-1">the lines that matter</div>
+                        </div>
+                        <div class="compare-stat-label">schema-valid json</div>
+                    </div>
+                </div>
 
-<section class="how" id="how">
-  <div class="section-label">Pipeline</div>
-  <h2 class="section-title">How ArchBTL works</h2>
-  <p class="section-subtitle">Three stages, one result: your AI architecture, visualized.</p>
-  <div class="pipeline">
-    <div class="pipeline-step">
-      <div class="step-num">1</div>
-      <h4>Static Analysis</h4>
-      <p>Tree-sitter parses your code into ASTs across 10+ languages. Call graphs, imports, HTTP endpoints all extracted.</p>
-    </div>
-    <div class="pipeline-arrow">→</div>
-    <div class="pipeline-step">
-      <div class="step-num">2</div>
-      <h4>LLM Enrichment</h4>
-      <p>Code structure sent to BTL Runtime via /v1/chat/completions. The model groups functions into meaningful workflows and generates labels.</p>
-    </div>
-    <div class="pipeline-arrow">→</div>
-    <div class="pipeline-step">
-      <div class="step-num">3</div>
-      <h4>Interactive Graph</h4>
-      <p>Mermaid output parsed, resolved against source locations, rendered as interactive DAG with D3.js and ELK layout.</p>
-    </div>
-  </div>
-</section>
+                <div class="compare-grid relative">
+                    <div class="compare-side left">
+                        <div class="log-stream">
+                            <div class="log-stream-inner">
+                                <div class="log-line">2026-05-04T14:22:11Z INFO  pod/api-7f9 starting...</div>
+                                <div class="log-line">2026-05-04T14:22:11Z INFO  loaded config /etc/api</div>
+                                <div class="log-line">2026-05-04T14:22:12Z INFO  postgres pool size=20</div>
+                                <div class="log-line">2026-05-04T14:22:12Z INFO  redis ping ok 0.6ms</div>
+                                <div class="log-line">2026-05-04T14:22:13Z INFO  health probe ok 200</div>
+                                <div class="log-line">2026-05-04T14:22:14Z INFO  request id=abc123 path=/v1/users</div>
+                                <div class="log-line">2026-05-04T14:22:14Z INFO  cache hit user:42</div>
+                                <div class="log-line">2026-05-04T14:22:15Z WARN  pool acquire 240ms</div>
+                                <div class="log-line">2026-05-04T14:22:16Z WARN  pool acquire 480ms</div>
+                                <div class="log-line">2026-05-04T14:22:16Z ERROR psycopg2.OperationalError: connection</div>
+                                <div class="log-line">2026-05-04T14:22:17Z ERROR retry 1/3 db_users</div>
+                                <div class="log-line">2026-05-04T14:22:17Z INFO  request id=abc124 path=/v1/orders</div>
+                                <div class="log-line">2026-05-04T14:22:18Z ERROR retry 2/3 db_users</div>
+                                <div class="log-line">2026-05-04T14:22:18Z ERROR upstream timeout id=abc124</div>
+                                <div class="log-line">2026-05-04T14:22:19Z INFO  cache miss user:99</div>
+                                <div class="log-line">2026-05-04T14:22:19Z WARN  circuit breaker open svc=db</div>
+                                <div class="log-line">2026-05-04T14:22:20Z INFO  request id=abc125 path=/v1/users</div>
+                                <div class="log-line">2026-05-04T14:22:20Z ERROR pool exhausted, queue=18</div>
+                                <div class="log-line">2026-05-04T14:22:21Z INFO  retry succeeded id=abc126</div>
+                                <div class="log-line">2026-05-04T14:22:21Z WARN  p99 latency 2840ms</div>
+                                <div class="log-line">2026-05-04T14:22:22Z INFO  cache miss user:51</div>
+                                <div class="log-fade">+ 1,199,979 more lines …</div>
+                                <!-- duplicate set for seamless loop -->
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:11Z INFO  pod/api-7f9 starting...</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:11Z INFO  loaded config /etc/api</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:12Z INFO  postgres pool size=20</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:12Z INFO  redis ping ok 0.6ms</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:13Z INFO  health probe ok 200</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:14Z INFO  request id=abc123 path=/v1/users</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:14Z INFO  cache hit user:42</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:15Z WARN  pool acquire 240ms</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:16Z WARN  pool acquire 480ms</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:16Z ERROR psycopg2.OperationalError: connection</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:17Z ERROR retry 1/3 db_users</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:17Z INFO  request id=abc124 path=/v1/orders</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:18Z ERROR retry 2/3 db_users</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:18Z ERROR upstream timeout id=abc124</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:19Z INFO  cache miss user:99</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:19Z WARN  circuit breaker open svc=db</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:20Z INFO  request id=abc125 path=/v1/users</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:20Z ERROR pool exhausted, queue=18</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:21Z INFO  retry succeeded id=abc126</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:21Z WARN  p99 latency 2840ms</div>
+                                <div class="log-line" aria-hidden="true">2026-05-04T14:22:22Z INFO  cache miss user:51</div>
+                                <div class="log-fade" aria-hidden="true">+ 1,199,979 more lines …</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="compare-side right">
+<pre style="margin: 0; white-space: pre-wrap;">{
+  <span class="json-key">"service"</span>: <span class="json-str">"api"</span>,
+  <span class="json-key">"window"</span>: <span class="json-str">"14:22:11 to 15:22:11"</span>,
+  <span class="json-key">"compression"</span>: <span class="json-num">8021</span>,
+  <span class="json-key">"evidence"</span>: [
+    {
+      <span class="json-key">"role"</span>: <span class="json-role-root">"root_cause"</span>,
+      <span class="json-key">"line"</span>: <span class="json-num">412847</span>,
+      <span class="json-key">"text"</span>: <span class="json-str">"psycopg2.OperationalError"</span>
+    },
+    {
+      <span class="json-key">"role"</span>: <span class="json-role-trigger">"trigger"</span>,
+      <span class="json-key">"line"</span>: <span class="json-num">412831</span>,
+      <span class="json-key">"text"</span>: <span class="json-str">"pool acquire 480ms"</span>
+    },
+    {
+      <span class="json-key">"role"</span>: <span class="json-role-cons">"consequence"</span>,
+      <span class="json-key">"line"</span>: <span class="json-num">412854</span>,
+      <span class="json-key">"text"</span>: <span class="json-str">"pool exhausted, queue=18"</span>
+    }
+    <span class="json-role-cons">// + 4 more, all cited</span>
+  ],
+  <span class="json-key">"routine_summary"</span>: { <span class="json-key">"total_lines"</span>: <span class="json-num">1085399</span>, <span class="json-key">"template_count"</span>: <span class="json-num">15</span> }
+}</pre>
+                    </div>
+                </div>
+                <!-- Funnel sits as a sibling of compare-grid so it spans the FULL card height (header + body) on desktop. On mobile, display:contents on .compare-stats + .compare-grid promotes everything to direct children of .compare-card and grid-template-areas re-orders them. -->
+                <div class="compare-funnel" aria-hidden="true">
+                    <svg class="funnel-svg-desktop" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="leftFunnelFill" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" class="grad-accent" stop-opacity="0.18"/>
+                                <stop offset="60%" class="grad-accent" stop-opacity="0.18"/>
+                                <stop offset="100%" class="grad-accent" stop-opacity="0"/>
+                            </linearGradient>
+                            <linearGradient id="rightFunnelFill" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" class="grad-cyan" stop-opacity="0"/>
+                                <stop offset="40%" class="grad-cyan" stop-opacity="0.16"/>
+                                <stop offset="100%" class="grad-cyan" stop-opacity="0.16"/>
+                            </linearGradient>
+                            <clipPath id="leftClip" clipPathUnits="userSpaceOnUse">
+                                <path d="M 0,0 C 10,42 10,46 38,46 L 38,54 C 10,54 10,58 0,100 Z"/>
+                            </clipPath>
+                            <clipPath id="rightClip" clipPathUnits="userSpaceOnUse">
+                                <path d="M 62,46 C 90,46 90,42 100,0 L 100,100 C 90,58 90,54 62,54 Z"/>
+                            </clipPath>
+                        </defs>
+                        <path d="M 0,0 C 10,42 10,46 38,46 L 38,54 C 10,54 10,58 0,100 Z" fill="url(#leftFunnelFill)" stroke="none"/>
+                        <path d="M 62,46 C 90,46 90,42 100,0 L 100,100 C 90,58 90,54 62,54 Z" fill="url(#rightFunnelFill)" stroke="none"/>
+                        <g clip-path="url(#leftClip)">
+                            <rect class="wave wave-l" x="-3" y="0" width="6" height="100"/>
+                        </g>
+                        <g clip-path="url(#rightClip)">
+                            <rect class="wave wave-r" x="59" y="0" width="6" height="100"/>
+                        </g>
+                    </svg>
+                    <!-- Mobile: vertical hourglass between stacked panes -->
+                    <svg class="funnel-svg-mobile" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="topFunnelFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" class="grad-accent" stop-opacity="0.18"/>
+                                <stop offset="60%" class="grad-accent" stop-opacity="0.18"/>
+                                <stop offset="100%" class="grad-accent" stop-opacity="0"/>
+                            </linearGradient>
+                            <linearGradient id="bottomFunnelFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" class="grad-cyan" stop-opacity="0"/>
+                                <stop offset="40%" class="grad-cyan" stop-opacity="0.16"/>
+                                <stop offset="100%" class="grad-cyan" stop-opacity="0.16"/>
+                            </linearGradient>
+                            <clipPath id="topClip" clipPathUnits="userSpaceOnUse">
+                                <path d="M 0,0 L 100,0 C 100,10 54,10 54,46 L 46,46 C 46,10 0,10 0,0 Z"/>
+                            </clipPath>
+                            <clipPath id="bottomClip" clipPathUnits="userSpaceOnUse">
+                                <path d="M 46,54 L 54,54 C 54,90 100,90 100,100 L 0,100 C 0,90 46,90 46,54 Z"/>
+                            </clipPath>
+                        </defs>
+                        <path d="M 0,0 L 100,0 C 100,10 54,10 54,46 L 46,46 C 46,10 0,10 0,0 Z" fill="url(#topFunnelFill)" stroke="none"/>
+                        <path d="M 46,54 L 54,54 C 54,90 100,90 100,100 L 0,100 C 0,90 46,90 46,54 Z" fill="url(#bottomFunnelFill)" stroke="none"/>
+                        <g clip-path="url(#topClip)">
+                            <rect class="wave wave-l" x="0" y="-3" width="100" height="6"/>
+                        </g>
+                        <g clip-path="url(#bottomClip)">
+                            <rect class="wave wave-r" x="0" y="59" width="100" height="6"/>
+                        </g>
+                    </svg>
+                    <img class="archbtl-logo" src="archbtl-logo-icon.svg" alt="ArchBTL">
+                    <div class="archbtl-cap"><span class="num">8,021×</span><span class="lbl">compression</span></div>
+                </div>
+            </div>
+            </div>
+        </div>
 
-<section class="btl-usage" id="btl">
-  <div class="section-label">Powered by</div>
-  <h2 class="section-title">Built entirely on BTL Runtime</h2>
-  <p class="section-subtitle">Every ArchBTL feature is powered by BTL Runtime endpoints. Here's exactly how.</p>
-  <div class="endpoint-grid">
-    <div class="endpoint-card">
-      <div class="endpoint-method">POST</div>
-      <div class="endpoint-path">/v1/chat/completions</div>
-      <p>Workflow detection, metadata generation, and structure condensation. All requests use the btl-2 model with temperature 0.0 for deterministic output.</p>
-    </div>
-    <div class="endpoint-card">
-      <div class="endpoint-method">POST</div>
-      <div class="endpoint-path">/analyze/compare</div>
-      <p>Multi-model comparison. Sends the same code through BTL Runtime, diffs the workflow graphs, and reports consensus scores with disagreements flagged.</p>
-    </div>
-    <div class="endpoint-card">
-      <div class="endpoint-method">POST</div>
-      <div class="endpoint-path">/search</div>
-      <p>Semantic search across all analyzed workflow nodes. Find "authentication" or "error handling" nodes across your entire codebase in milliseconds.</p>
-    </div>
-    <div class="endpoint-card">
-      <div class="endpoint-method">GET</div>
-      <div class="endpoint-path">/v1/models</div>
-      <p>Health check validates the BTL API key on extension activation. Green light means you're ready to analyze.</p>
-    </div>
-  </div>
-</section>
+    </section>
 
-<section class="cta">
-  <h2>Know your AI architecture.</h2>
-  <p>One click. Every LLM call. Every chain. Every edge. All in VSCode.</p>
-  <a href="https://github.com/subheeksh5599/ArchBTL" class="btn-primary">Get Started on GitHub</a>
-</section>
+    <!-- ==================== THE PROBLEM ==================== -->
+    <section id="problem" class="py-20 md:py-28 relative overflow-hidden">
+        <style>
+            /* ── sparse, figure-led problem section ── */
+            .prob-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 3rem; }
+            .prob-col { display: flex; flex-direction: column; padding: 2rem 1.9rem; border: 1px solid var(--border); border-radius: 0.35rem; background: rgba(var(--bg-deep-rgb), 0.4); transition: border-color 0.4s ease; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
+            .prob-col:hover { border-color: var(--border-hover); }
+            /* figure breaks out of the card padding: full width, flush to the bottom edge */
+            .prob-col .prob-fig { order: 2; width: auto; margin: 1.9rem -1.9rem -2rem; border-left: none; border-right: none; border-bottom: none; border-radius: 0; }
+            @media (min-width: 768px) {
+                .prob-grid { grid-template-columns: 1fr 1fr; gap: 1.75rem; margin-top: 4.5rem; }
+                .prob-col { padding: 2.6rem 2.5rem; }
+                .prob-col .prob-fig { margin: 1.9rem -2.5rem -2.6rem; }
+            }
+            .pc-label { font-family: 'B612 Mono', monospace; font-size: 0.92rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1.1rem; }
+            .prob-col.cost  .pc-label { color: var(--accent-light); }
+            .prob-col.scale .pc-label { color: var(--cyan); }
 
-<footer>
-  <div class="footer-links">
-    <a href="https://github.com/subheeksh5599/ArchBTL">GitHub</a>
-    <a href="https://badtheorylabs.com/runtime">BTL Runtime</a>
-    <a href="https://discord.gg/QJBCcB7bF">Discord</a>
-  </div>
-  <p>Built with BTL Runtime. ArchBTL &copy; 2026.</p>
-</footer>
+            /* figure shell */
+            .prob-fig { position: relative; width: 100%; height: clamp(250px, 36vw, 340px); border: 1px solid var(--border); border-radius: 0.28rem; overflow: hidden;
+                background: linear-gradient(155deg, rgba(var(--bg-deep-rgb), 0.6), rgba(var(--bg-deep-rgb), 0.2)); box-shadow: inset 0 0 70px rgba(0,0,0,0.28); }
+            .fig-tag { position: absolute; top: 0.85rem; left: 1rem; z-index: 6; font-family: 'B612 Mono', monospace; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(var(--fg-strong-rgb), 0.4); }
 
-</body>
+            /* FIG 1: agents compacting context (claude code + codex) */
+            .prob-fig.cmp { display: flex; flex-direction: column; justify-content: center; gap: 2.1rem; padding: 2.9rem 1.7rem 1.9rem; }
+            .cmp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; font-family: 'B612 Mono', monospace; font-size: 0.66rem; letter-spacing: 0.03em; min-height: 26px; }
+            .cmp-agent { color: rgba(var(--fg-strong-rgb), 0.72); }
+            .cmp-status { display: inline-flex; align-items: center; gap: 0.65rem; }
+            .cmp-stxt { font-family: 'B612 Mono', monospace; font-size: 1.24rem; letter-spacing: 0.04em; color: rgba(var(--fg-strong-rgb), 0.5); }
+            .cmp-spin { width: 24px; height: 24px; border-radius: 50%; box-sizing: border-box; border: 3px solid rgba(var(--fg-strong-rgb), 0.16); border-top-color: var(--warning); animation: cmpSpin 0.7s linear infinite; }
+            .cmp-track { height: 9px; border-radius: 9999px; background: rgba(var(--fg-strong-rgb), 0.08); overflow: hidden; }
+            .cmp-fill { display: block; height: 100%; width: 95%; border-radius: 9999px; background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.5), var(--accent)); box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.45); }
+            @keyframes cmpSpin { to { transform: rotate(360deg); } }
+
+            /* FIG 2: one incident spans the whole fleet of pods */
+            .prob-fig.fleet { padding: 2.5rem 1.3rem 1.3rem; }
+            .fleet-grid { position: absolute; inset: 2.6rem 1.3rem 1.3rem; display: grid; grid-template-columns: repeat(18, 1fr); gap: 5px; align-content: center; }
+            .pod { aspect-ratio: 1; border-radius: 2px; background: rgba(var(--fg-strong-rgb), 0.07); animation: podTwinkle 4.5s ease-in-out infinite; }
+            .pod:nth-child(2n) { animation-delay: -0.7s; }
+            .pod:nth-child(3n) { animation-delay: -1.5s; }
+            .pod:nth-child(5n) { animation-delay: -2.4s; }
+            .pod:nth-child(7n) { animation-delay: -3.3s; }
+            .pod.live { background: rgba(var(--cyan-rgb), 0.45); }
+            .pod.hot  { background: var(--warning); box-shadow: 0 0 7px rgba(250, 189, 47, 0.55); animation: podHot 1.6s ease-in-out infinite; }
+            @keyframes podTwinkle { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+            @keyframes podHot { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+
+            @media (prefers-reduced-motion: reduce) {
+                .cmp-spin { animation: none; }
+                .pod, .pod.hot { animation: none; }
+            }
+        </style>
+        <div class="max-w-7xl mx-auto px-6 sm:px-8">
+            <p class="section-label mb-4 fade-in">the problem</p>
+            <h2 class="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-white leading-[1.05] mb-2 fade-in max-w-3xl">
+                Agents are great at debugging<br>
+                <span class="accent-text">until they hit the logs</span>
+            </h2>
+
+            <div class="prob-grid">
+                <!-- individuals · cost -->
+                <div class="prob-col cost">
+                <div class="prob-fig cmp fade-in" aria-hidden="true">
+                    <span class="fig-tag">context usage</span>
+                    <div class="cmp-row">
+                        <div class="cmp-head"><span class="cmp-agent">claude code</span><span class="cmp-status"><span class="cmp-spin"></span><span class="cmp-stxt">compacting...</span></span></div>
+                        <div class="cmp-track"><i class="cmp-fill"></i></div>
+                    </div>
+                    <div class="cmp-row">
+                        <div class="cmp-head"><span class="cmp-agent">codex</span><span class="cmp-status"><span class="cmp-spin"></span><span class="cmp-stxt">compacting...</span></span></div>
+                        <div class="cmp-track"><i class="cmp-fill"></i></div>
+                    </div>
+                </div>
+                    <p class="pc-label">for individuals</p>
+                    <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-4">Too costly to read</h3>
+                    <p class="text-gray-300 text-base sm:text-lg leading-relaxed">Every read burns tokens and context. The window fills with routine noise before your agent reaches the answer.</p>
+                </div>
+
+                <!-- platform & infra · scale -->
+                <div class="prob-col scale">
+                <div class="prob-fig fleet fade-in" aria-hidden="true">
+                    <span class="fig-tag">production · 1,248 pods</span>
+                    <div class="fleet-grid"><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod hot"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod hot"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod hot"></i><i class="pod live"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod"></i><i class="pod live"></i><i class="pod live"></i><i class="pod"></i></div>
+                </div>
+                    <p class="pc-label">for platform &amp; infra</p>
+                    <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-4">Too big to read</h3>
+                    <p class="text-gray-300 text-base sm:text-lg leading-relaxed">Millions of lines a day, more than any agent can hold. Most of it never fits the window at all.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== THE RESULT (solution) ==================== -->
+    <section class="py-20 md:py-28 relative overflow-hidden">
+        <style>
+            .cap-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.75rem; align-items: center; }
+            .cap-split > div { min-width: 0; }
+            @media (min-width: 1024px) { .cap-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4.5rem; } }
+            .cap-code { overflow-wrap: anywhere; }
+            .cap-pillar { padding-left: 1rem; border-left: 2px solid var(--border); }
+            .cap-pillar h4 { font-family: 'B612 Mono', monospace; font-size: 0.92rem; letter-spacing: 0.02em; color: var(--fg-strong); margin-bottom: 0.3rem; }
+            .cap-pillar p { color: rgba(var(--fg-strong-rgb), 0.6); font-size: 0.95rem; line-height: 1.55; }
+            .cap-pillar.root    { border-left-color: var(--error); }
+            .cap-pillar.trigger { border-left-color: var(--warning); }
+            .cap-pillar.cons    { border-left-color: var(--accent); }
+            .cap-panel { border: 1px solid var(--border); border-radius: 0.35rem; background: rgba(var(--bg-deep-rgb), 0.55); padding: 1.5rem 1.6rem; box-shadow: 0 24px 80px rgba(0,0,0,0.25); overflow: hidden; }
+            .cap-tag { display: block; color: rgba(var(--fg-strong-rgb), 0.4); font-family: 'B612 Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 1rem; }
+            .cap-code { font-family: 'B612 Mono', monospace; font-size: clamp(0.72rem, 1.6vw, 0.82rem); line-height: 1.9; color: rgba(var(--fg-strong-rgb), 0.85); }
+            .cap-code .ind1 { padding-left: 1.3em; }
+            .cap-ev { margin-left: 2.6em; padding: 0.1rem 0.5rem; border-radius: 0.25rem; }
+            .cap-ev.e1 { animation: capScan 6s ease-in-out infinite 0s; }
+            .cap-ev.e2 { animation: capScan 6s ease-in-out infinite 2s; }
+            .cap-ev.e3 { animation: capScan 6s ease-in-out infinite 4s; }
+            @keyframes capScan { 0%, 100% { background: transparent; } 8% { background: rgba(var(--accent-rgb), 0.13); } 22% { background: transparent; } }
+            @media (prefers-reduced-motion: reduce) { .cap-ev { animation: none; } }
+        </style>
+        <div class="max-w-7xl mx-auto px-6 sm:px-8">
+            <div class="cap-split">
+                <div class="fade-in">
+                    <p class="section-label mb-4">the result</p>
+                    <h2 class="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-white leading-[1.05] mb-5">
+                        Not a summary<br>
+                        <span class="accent-text">Just the lines that matter</span>
+                    </h2>
+                    <p class="text-base sm:text-lg text-gray-300 max-w-xl leading-relaxed mb-9">
+                        ArchBTL returns schema-valid JSON. Every line it keeps points to a real line number, tagged by its role in the incident. Nothing summarized away, nothing invented.
+                    </p>
+                    <div class="flex flex-col gap-5">
+                        <div class="cap-pillar root">
+                            <h4>cited to the line</h4>
+                            <p>Every claim references a real line number. No invented evidence.</p>
+                        </div>
+                        <div class="cap-pillar trigger">
+                            <h4>tagged by role</h4>
+                            <p>root_cause, trigger, consequence. Your agent gets causality, not a flat dump.</p>
+                        </div>
+                        <div class="cap-pillar cons">
+                            <h4>schema-valid</h4>
+                            <p>Strict JSON your agent and tools parse every time.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cap-panel fade-in" aria-label="schema-valid output example">
+                    <span class="cap-tag">schema-valid output · 1.2M lines &rarr; 3.3k tokens</span>
+                    <div class="cap-code">
+                        <div>{</div>
+                        <div class="ind1"><span class="json-key">"service"</span>: <span class="json-str">"api"</span>,</div>
+                        <div class="ind1"><span class="json-key">"window"</span>: <span class="json-str">"14:22:11 to 15:22:11"</span>,</div>
+                        <div class="ind1"><span class="json-key">"compression"</span>: <span class="json-num">8021</span>,</div>
+                        <div class="ind1"><span class="json-key">"evidence"</span>: [</div>
+                        <div class="cap-ev e1">{ <span class="json-key">"role"</span>: <span class="json-role-root">"root_cause"</span>, <span class="json-key">"line"</span>: <span class="json-num">412847</span>, <span class="json-key">"text"</span>: <span class="json-str">"psycopg2.OperationalError"</span> }</div>
+                        <div class="cap-ev e2">{ <span class="json-key">"role"</span>: <span class="json-role-trigger">"trigger"</span>, <span class="json-key">"line"</span>: <span class="json-num">412831</span>, <span class="json-key">"text"</span>: <span class="json-str">"pool acquire 480ms"</span> }</div>
+                        <div class="cap-ev e3">{ <span class="json-key">"role"</span>: <span class="json-role-cons">"consequence"</span>, <span class="json-key">"line"</span>: <span class="json-num">412854</span>, <span class="json-key">"text"</span>: <span class="json-str">"pool exhausted, queue=18"</span> }</div>
+                        <div class="ind1">],</div>
+                        <div class="ind1"><span class="json-key">"routine_summary"</span>: { <span class="json-key">"total_lines"</span>: <span class="json-num">1085399</span>, <span class="json-key">"templates"</span>: <span class="json-num">15</span> }</div>
+                        <div>}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PAY LESS, SEE MORE ==================== -->
+    <section class="py-16 md:py-20 relative">
+        <style>
+            .savings-bar { height: 7px; border-radius: 9999px; overflow: hidden; }
+            .savings-bar-raw  { background: rgba(var(--error-rgb), 0.06); }
+            .savings-bar-cdg  { background: rgba(var(--accent-rgb), 0.06); }
+            .savings-bar-raw  > i { display: block; height: 100%; border-radius: 9999px; background: linear-gradient(90deg, rgba(var(--error-rgb), 0.5), rgba(var(--error-rgb), 0.18)); width: 100%; }
+            .savings-bar-cdg  > i { display: block; height: 100%; border-radius: 9999px; background: linear-gradient(90deg, var(--accent), var(--accent-light)); width: 0.5%; min-width: 8px; box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.55); }
+        </style>
+        <div class="max-w-7xl mx-auto px-6 sm:px-8">
+            <p class="font-mono text-xs md:text-sm text-accent-light mb-4 fade-in">for coding agents</p>
+            <h2 class="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-white leading-[1.05] mb-4 fade-in">
+                Your agent reads logs<br>
+                <span class="accent-text">We hand it what matters</span>
+            </h2>
+            <p class="text-base sm:text-lg text-gray-300 max-w-2xl leading-relaxed mb-9 fade-in">
+                Set up once, then wrap any log fetch your agent already makes.
+            </p>
+
+            <!-- Per-agent slides (oss-card style) -->
+            <div class="flex flex-col gap-6 stagger">
+                <div class="oss-card fade-in">
+                    <div class="oss-info">
+                        <p class="font-mono text-xs text-accent-light mb-3">claude code</p>
+                        <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-4">Hooks + MCP, wired automatically</h3>
+                        <p class="text-gray-300 text-base leading-relaxed mb-3">
+                            <code class="font-mono text-white/70">archbtl setup</code> installs the hook and the MCP server. Claude reads logs through ArchBTL from then on.
+                        </p>
+                        <p class="text-gray-400 text-sm leading-relaxed">Same Claude. Same answers. Fraction of the token bill.</p>
+                    </div>
+                    <div class="oss-media oss-media-terminal">
+                        <pre class="oss-terminal" aria-label="Claude Code archbtl setup example"><span class="term-prompt">$</span> archbtl setup
+<span class="term-dim">detected Claude Code</span>
+registered MCP server: archbtl
+
+<span class="term-prompt">claude</span> tail_kubernetes
+<span class="term-dim">returns the lines that matter</span></pre>
+                        <div class="oss-vignette"></div>
+                    </div>
+                </div>
+
+                <div class="oss-card reverse fade-in">
+                    <div class="oss-info">
+                        <p class="font-mono text-xs text-accent-light mb-3">codex</p>
+                        <h3 class="font-display text-2xl md:text-3xl font-bold text-white mb-4">MCP, drop-in</h3>
+                        <p class="text-gray-300 text-base leading-relaxed mb-3">
+                            Point Codex at the ArchBTL MCP server. Same prompts, compressed logs.
+                        </p>
+                        <p class="text-gray-400 text-sm leading-relaxed">Sign in once. No agent config files to edit.</p>
+                    </div>
+                    <div class="oss-media oss-media-terminal">
+                        <pre class="oss-terminal" aria-label="Codex archbtl MCP example"><span class="term-prompt">$</span> archbtl mcp serve
+<span class="term-dim">tools: tail_aws_logs, tail_vercel, wrap</span>
+
+<span class="term-prompt">codex</span> wrap docker logs api
+<span class="term-dim">raw logs stay out of the prompt</span></pre>
+                        <div class="oss-vignette"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== SOURCES ==================== -->
+    <section class="py-16 md:py-24 relative">
+        <style>
+            .src-card { border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden;
+                background: linear-gradient(180deg, rgba(var(--bg-deep-rgb), 0.85), rgba(var(--bg-deep-rgb), 0.5)); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
+            .src-term { padding: 1.7rem 1.8rem; font-family: 'B612 Mono', monospace; font-size: clamp(0.72rem, 2.2vw, 0.95rem); line-height: 1.95; }
+            .src-cmdline { position: relative; height: 1.95em; }
+            .src-cmd { position: absolute; inset: 0; opacity: 0; white-space: nowrap; animation: srcShow 12s linear infinite; }
+            .src-cmd .p { color: var(--accent-light); }
+            .src-cmd .s { color: var(--fg-strong); }
+            .src-cmd:nth-child(1) { animation-delay:  0s; }
+            .src-cmd:nth-child(2) { animation-delay: -2s; }
+            .src-cmd:nth-child(3) { animation-delay: -4s; }
+            .src-cmd:nth-child(4) { animation-delay: -6s; }
+            .src-cmd:nth-child(5) { animation-delay: -8s; }
+            .src-cmd:nth-child(6) { animation-delay: -10s; }
+            @keyframes srcShow { 0% { opacity: 0; } 1.5% { opacity: 1; } 15% { opacity: 1; } 16.6% { opacity: 0; } 100% { opacity: 0; } }
+            .src-result { margin-top: 0.4rem; color: rgba(var(--fg-strong-rgb), 0.5); }
+            .src-result b { color: var(--accent); font-weight: 600; }
+            .src-chips { display: flex; flex-wrap: wrap; gap: 0.6rem; padding: 1.35rem 1.8rem; border-top: 1px solid var(--border); }
+            .src-chip { font-family: 'B612 Mono', monospace; font-size: 0.74rem; padding: 0.32rem 0.75rem; border: 1px solid var(--border); border-radius: 9999px; color: rgba(var(--fg-strong-rgb), 0.62); white-space: nowrap; }
+            .src-chip .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: 0.5rem; vertical-align: middle; box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6); animation: srcDot 3s ease-in-out infinite; }
+            .src-chip:nth-child(2n) .dot { animation-delay: -1s; }
+            .src-chip:nth-child(3n) .dot { animation-delay: -2s; }
+            @keyframes srcDot { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+            @media (prefers-reduced-motion: reduce) {
+                .src-cmd { animation: none; }
+                .src-cmd:nth-child(1) { opacity: 1; }
+                .src-chip .dot { animation: none; }
+            }
+        </style>
+        <div class="max-w-7xl mx-auto px-6 sm:px-8">
+            <p class="font-mono text-xs md:text-sm text-accent-light mb-4 fade-in">any source</p>
+            <h2 class="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-white leading-[1.05] mb-4 fade-in">
+                Wrap any log command<br>
+                <span class="accent-text">We handle the rest</span>
+            </h2>
+            <p class="text-base sm:text-lg text-gray-300 max-w-2xl leading-relaxed mb-9 fade-in">
+                Drop-in over HTTPS. Point ArchBTL at any log stream you already run, and your agent gets back just the lines that matter.
+            </p>
+
+            <div class="src-card fade-in">
+                <div class="src-term" aria-label="archbtl wrap works with any log source">
+                    <div class="src-cmdline">
+                        <div class="src-cmd"><span class="p">$</span> archbtl wrap -- <span class="s">kubectl logs -n prod api</span></div>
+                        <div class="src-cmd"><span class="p">$</span> archbtl wrap -- <span class="s">vercel logs --since 1h</span></div>
+                        <div class="src-cmd"><span class="p">$</span> archbtl wrap -- <span class="s">aws logs tail /prod/api</span></div>
+                        <div class="src-cmd"><span class="p">$</span> archbtl wrap -- <span class="s">railway logs</span></div>
+                        <div class="src-cmd"><span class="p">$</span> archbtl wrap -- <span class="s">docker compose logs api</span></div>
+                        <div class="src-cmd"><span class="p">$</span> archbtl wrap -- <span class="s">journalctl -u api -f</span></div>
+                    </div>
+                    <div class="src-result">&rarr; <b>schema-valid JSON</b> · 1.2M lines &rarr; 3.3k tokens</div>
+                </div>
+                <div class="src-chips">
+                    <span class="src-chip"><span class="dot"></span>vercel</span>
+                    <span class="src-chip"><span class="dot"></span>aws cloudwatch</span>
+                    <span class="src-chip"><span class="dot"></span>railway</span>
+                    <span class="src-chip"><span class="dot"></span>kubernetes</span>
+                    <span class="src-chip"><span class="dot"></span>docker</span>
+                    <span class="src-chip"><span class="dot"></span>datadog</span>
+                    <span class="src-chip"><span class="dot"></span>sentry</span>
+                    <span class="src-chip"><span class="dot"></span>journalctl</span>
+                    <span class="src-chip"><span class="dot"></span>any stdout</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FAQ ==================== -->
+    <section class="py-16 md:py-24 relative" id="faq">
+        <style>
+            .faq-list { border-top: 1px solid var(--border); }
+            .faq-item { padding: 1.4rem 0; border-bottom: 1px solid var(--border); }
+            .faq-q { letter-spacing: -0.01em; }
+        </style>
+        <div class="max-w-3xl mx-auto px-6 sm:px-8">
+            <p class="section-label mb-4 fade-in">faq</p>
+            <h2 class="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-white leading-[1.05] mb-10 fade-in">
+                Questions, answered
+            </h2>
+            <div class="faq-list stagger">
+                <div class="faq-item fade-in">
+                    <h3 class="faq-q font-display text-lg sm:text-xl text-white mb-2">What is ArchBTL?</h3>
+                    <p class="faq-a text-gray-300 leading-relaxed">ArchBTL is a developer tool that compresses infrastructure logs so AI agents can read them. It cuts a huge log window down to the few lines that matter, schema-valid, in seconds, so your agent gets the same answer at a fraction of the tokens.</p>
+                </div>
+                <div class="faq-item fade-in">
+                    <h3 class="faq-q font-display text-lg sm:text-xl text-white mb-2">How is ArchBTL different from raw logs or Drain3?</h3>
+                    <p class="faq-a text-gray-300 leading-relaxed">ArchBTL keeps every line that matters and tags it by its role in the incident, with a pointer to the real log line number. Nothing is summarized away and nothing is invented. It is benchmarked against Drain3 and a raw-logs control on LogHub-2.0 with a blind-judge agent-diagnosis evaluation.</p>
+                </div>
+                <div class="faq-item fade-in">
+                    <h3 class="faq-q font-display text-lg sm:text-xl text-white mb-2">Does ArchBTL replace my LLM?</h3>
+                    <p class="faq-a text-gray-300 leading-relaxed">No. ArchBTL sits in front of your LLM. Send raw logs to ArchBTL, get back just the lines that matter as schema-valid JSON, then pass that to whatever agent you already use: Claude, GPT, Gemini, or a local model.</p>
+                </div>
+                <div class="faq-item fade-in">
+                    <h3 class="faq-q font-display text-lg sm:text-xl text-white mb-2">Which log formats does ArchBTL support?</h3>
+                    <p class="faq-a text-gray-300 leading-relaxed">Anything line-oriented: JSON logs, syslog, framework-specific formats like Hadoop, Spark, HDFS, and Kubernetes, and unstructured application logs. Preprocessing handles parsing and PII redaction before templating.</p>
+                </div>
+                <div class="faq-item fade-in">
+                    <h3 class="faq-q font-display text-lg sm:text-xl text-white mb-2">How much does ArchBTL cost?</h3>
+                    <p class="faq-a text-gray-300 leading-relaxed">ArchBTL is free forever on the Free plan, which includes 50 MB per month. Paid plans start at $19 per month for Hobby and $199 per month plus usage for Team. Pricing is by compute, not seats.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== CLOSE / CTA ==================== -->
+    <section class="py-20 md:py-28 relative overflow-hidden">
+        <style>
+            .cta-glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 60% 75% at 50% 45%, rgba(var(--accent-rgb), 0.08), transparent 70%); }
+            .cta-foot { font-family: 'B612 Mono', monospace; font-size: 0.74rem; letter-spacing: 0.01em; color: rgba(var(--fg-strong-rgb), 0.4); }
+        </style>
+        <div class="cta-glow" aria-hidden="true"></div>
+        <div class="max-w-3xl mx-auto px-6 sm:px-8 text-center relative">
+            <h2 class="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-white leading-[1.08] mb-5 fade-in">
+                Give your agent logs<br>
+                <span class="accent-text">it can actually read.</span>
+            </h2>
+            <p class="text-base sm:text-lg text-gray-300 leading-relaxed mb-8 max-w-xl mx-auto fade-in">
+                Drop-in over HTTPS. Wired into Claude Code and Codex in one command.
+            </p>
+            <div class="copy-cmd fade-in text-xs sm:text-sm">
+                <code><span class="prompt">$</span>curl -fsSL https://github.com/subheeksh5599/ArchBTL | sh</code>
+                <button type="button" class="copy-icon" data-copy-text="curl -fsSL https://github.com/subheeksh5599/ArchBTL | sh" aria-label="Copy install command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+            </div>
+            <p class="cta-foot mt-6 fade-in">Free tier forever.</p>
+        </div>
+    </section>
+
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="px-6 sm:px-8 pt-16 pb-12 border-t border-white/[0.05] mt-12">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col sm:flex-row justify-between items-start gap-10 mb-10">
+                <div class="max-w-md">
+                    <a href="/" class="inline-flex items-center mb-4 opacity-50 hover:opacity-80 transition-opacity"><img src="archbtl-logo.svg" alt="ArchBTL" class="h-6"></a>
+                    <p class="text-gray-300 text-sm leading-relaxed mb-3">
+                        ArchBTL is a developer tool that compresses infrastructure log data into structured incident summaries for AI agents like Claude Code. Drop-in over HTTPS, MCP-compatible, schema-valid output, our own fine-tuned models.
+                    </p>
+                    <p class="text-gray-500 text-xs">ArchBTL Inc. · San Francisco</p>
+                </div>
+                <div class="flex flex-col items-start sm:items-end gap-3">
+                    <a href="/cdn-cgi/l/email-protection#92fffbf1faf3f7fed2f1fdf6f3f5bcf3fb" class="text-gray-400 hover:text-white transition-colors text-sm"><span class="__cf_email__" data-cfemail="bdd0d4ded5dcd8d1fdded2d9dcda93dcd4">[email&#160;protected]</span></a>
+                    <div class="flex gap-4 text-gray-400 text-sm flex-wrap sm:justify-end">
+                        <a href="/" class="hover:text-white transition-colors">Product</a>
+                        <a href="/benchmarks.html" class="hover:text-white transition-colors">Benchmarks</a>
+                        <a href="#privacy" class="hover:text-white transition-colors">Privacy Policy</a>
+                        <a href="#terms" class="hover:text-white transition-colors">Terms of Service</a>
+                        <a href="/support.html" class="hover:text-white transition-colors">Support</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="posthog.js" defer></script>
+    
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a15e51a508cf5403',t:'MTc4MzE3MDA4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
