@@ -10,10 +10,10 @@ from models import (
 )
 from prompts import build_metadata_only_prompt, USE_MERMAID_FORMAT
 from mermaid_parser import parse_mermaid_response
-from gemini_client import gemini_client
+from btl_client import btl_client
 from config import settings
 
-app = FastAPI(title="Codag")
+app = FastAPI(title="ArchBTL")
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,69 +24,55 @@ app.add_middleware(
 )
 
 
-# =============================================================================
-# Analysis Endpoint
-# =============================================================================
-
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze_workflow(
     request: AnalyzeRequest,
 ):
-    """
-    Analyze code for LLM workflow patterns.
-    """
-    if not gemini_client.client:
-        raise HTTPException(status_code=503, detail="Gemini API key not configured")
+    if not settings.btl_api_key:
+        raise HTTPException(status_code=503, detail="BTL API key not configured")
 
-    # Track cumulative cost across retries
     total_usage = TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0, cached_tokens=0)
     total_cost = CostData(input_cost=0.0, output_cost=0.0, total_cost=0.0)
 
-    # Input validation
-    MAX_CODE_SIZE = 5_000_000  # 5MB limit
-    MAX_FILES = 50  # Reasonable limit on number of files
+    MAX_CODE_SIZE = 5_000_000
+    MAX_FILES = 50
 
     if len(request.code) > MAX_CODE_SIZE:
         raise HTTPException(
             status_code=413,
-            detail=f"Code size ({len(request.code)} bytes) exceeds maximum allowed size ({MAX_CODE_SIZE} bytes). Try analyzing fewer files or smaller files."
+            detail=f"Code size ({len(request.code)} bytes) exceeds maximum allowed size ({MAX_CODE_SIZE} bytes)."
         )
-
     if request.file_paths and len(request.file_paths) > MAX_FILES:
         raise HTTPException(
             status_code=413,
-            detail=f"Number of files ({len(request.file_paths)}) exceeds maximum allowed ({MAX_FILES}). Try analyzing fewer files at once."
+            detail=f"Number of files ({len(request.file_paths)}) exceeds maximum allowed ({MAX_FILES})."
         )
 
-    # Convert metadata to dict format
     metadata_dicts = [m.model_dump() for m in request.metadata] if request.metadata else None
 
-    # Helper to accumulate usage/cost
     def accumulate_cost(usage: TokenUsage, cost: CostData):
         nonlocal total_usage, total_cost
         total_usage = TokenUsage(
             input_tokens=total_usage.input_tokens + usage.input_tokens,
             output_tokens=total_usage.output_tokens + usage.output_tokens,
             total_tokens=total_usage.total_tokens + usage.total_tokens,
-            cached_tokens=total_usage.cached_tokens + usage.cached_tokens
+            cached_tokens=total_usage.cached_tokens + usage.cached_tokens,
         )
         total_cost = CostData(
             input_cost=total_cost.input_cost + cost.input_cost,
             output_cost=total_cost.output_cost + cost.output_cost,
-            total_cost=total_cost.total_cost + cost.total_cost
+            total_cost=total_cost.total_cost + cost.total_cost,
         )
 
-    # LLM analysis
     try:
-        result, usage, cost = await gemini_client.analyze_workflow(
+        result, usage, cost = await btl_client.analyze_workflow(
             request.code,
             metadata_dicts,
-            http_connections=request.http_connections
+            http_connections=request.http_connections,
         )
         accumulate_cost(usage, cost)
         result = result.strip()
 
-        # Helper to fix file paths from LLM (handles both relative and mangled absolute paths)
         def fix_file_path(path: str, file_paths: list) -> str:
             if not path:
                 return path
@@ -98,13 +84,9 @@ async def analyze_workflow(
                     return input_path
             return path
 
-        # Parse response based on format
         if USE_MERMAID_FORMAT:
-            # Parse Mermaid + Metadata format with retry on failure
             MAX_RETRIES = 2
-
             for attempt in range(MAX_RETRIES + 1):
-                # Strip markdown wrappers if present
                 clean_result = result
                 if clean_result.startswith("```"):
                     clean_result = clean_result.split("\n", 1)[1] if "\n" in clean_result else clean_result[3:]
@@ -113,10 +95,9 @@ async def analyze_workflow(
 
                 try:
                     graph = parse_mermaid_response(clean_result.strip())
-                    break  # Success - exit retry loop
+                    break
                 except ValueError as e:
                     if attempt < MAX_RETRIES:
-                        # Retry with a correction prompt
                         correction_prompt = f"""Your previous response could not be parsed. Error: {str(e)[:200]}
 
 CRITICAL FORMAT REMINDER:
@@ -136,30 +117,21 @@ B: {{file: "file.py", line: 10, function: "llm", type: "llm"}}
 
 Please re-analyze the code and output in the CORRECT format."""
                         try:
-                            result, retry_usage, retry_cost = await gemini_client.analyze_workflow(
+                            result, retry_usage, retry_cost = await btl_client.analyze_workflow(
                                 request.code,
                                 metadata_dicts,
-                                correction_prompt
+                                correction_prompt,
                             )
                             accumulate_cost(retry_usage, retry_cost)
                             result = result.strip()
                         except Exception as retry_err:
-                            raise HTTPException(
-                                status_code=500,
-                                detail=f"Analysis failed after retry: {str(e)}"
-                            )
+                            raise HTTPException(status_code=500, detail=f"Analysis failed after retry: {str(e)}")
                     else:
-                        # All retries exhausted
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"Analysis failed after {MAX_RETRIES + 1} attempts: Could not parse Mermaid response. {str(e)}"
-                        )
+                        raise HTTPException(status_code=500, detail=f"Analysis failed after {MAX_RETRIES + 1} attempts: {str(e)}")
 
-            # Empty graph is valid - code has no LLM calls
             if not graph.nodes:
                 return AnalyzeResponse(graph=graph, usage=total_usage, cost=total_cost)
 
-            # Fix file paths in nodes
             for node in graph.nodes:
                 if node.source and node.source.file:
                     node.source.file = fix_file_path(node.source.file, request.file_paths)
@@ -174,27 +146,16 @@ Please re-analyze the code and output in the CORRECT format."""
 
 @app.post("/analyze/metadata-only")
 async def analyze_metadata_only(request: MetadataRequest):
-    """Generate metadata (labels, descriptions) for functions.
+    if not settings.btl_api_key:
+        raise HTTPException(status_code=503, detail="BTL API key not configured")
 
-    This is a lightweight endpoint for incremental updates.
-    Structure is already known from local tree-sitter analysis.
-    Only needs LLM for human-readable labels and descriptions.
-    """
-    if not gemini_client.client:
-        raise HTTPException(status_code=503, detail="Gemini API key not configured")
-    # Build prompt from structure context
     files_data = [f.model_dump() for f in request.files]
     prompt = build_metadata_only_prompt(files_data)
-
-    # Add code context if provided
     if request.code:
         prompt += f"\n\nFull code for context:\n{request.code[:8000]}"
 
     try:
-        # Use gemini for metadata generation (simple prompt, no workflow system instruction)
-        result, usage, cost = await gemini_client.generate_metadata(prompt)
-
-        # Clean markdown if present
+        result, usage, cost = await btl_client.generate_metadata(prompt)
         result = result.strip()
         if result.startswith("```json"):
             result = result[7:]
@@ -203,11 +164,9 @@ async def analyze_metadata_only(request: MetadataRequest):
         if result.endswith("```"):
             result = result[:-3]
 
-        # Parse response
         try:
             metadata_data = json.loads(result.strip())
         except json.JSONDecodeError:
-            # Try to recover
             result_clean = result.strip()
             open_braces = result_clean.count('{') - result_clean.count('}')
             open_brackets = result_clean.count('[') - result_clean.count(']')
@@ -215,7 +174,6 @@ async def analyze_metadata_only(request: MetadataRequest):
             result_clean += '}' * max(0, open_braces)
             metadata_data = json.loads(result_clean)
 
-        # Convert to response model
         files_result = []
         for file_data in metadata_data.get('files', []):
             functions = [
@@ -237,24 +195,17 @@ async def analyze_metadata_only(request: MetadataRequest):
             "usage": usage.model_dump(),
             "cost": cost.model_dump()
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Metadata analysis failed: {str(e)}")
 
 
 @app.post("/condense-structure")
 async def condense_structure(request: CondenseRequest):
-    """Condense raw repo structure into workflow-relevant summary.
+    if not settings.btl_api_key:
+        raise HTTPException(status_code=503, detail="BTL API key not configured")
 
-    Uses LLM to:
-    1. Filter out irrelevant files (tests, configs, utilities)
-    2. Identify LLM/AI workflow entry points
-    3. Create condensed structure for cross-batch context
-    """
-    if not gemini_client.client:
-        raise HTTPException(status_code=503, detail="Gemini API key not configured")
     try:
-        condensed, usage, cost = await gemini_client.condense_repo_structure(request.raw_structure)
+        condensed, usage, cost = await btl_client.condense_repo_structure(request.raw_structure)
         return {
             "condensed_structure": condensed,
             "usage": usage.model_dump(),
@@ -266,15 +217,22 @@ async def condense_structure(request: CondenseRequest):
 
 @app.get("/health")
 async def health():
-    if not settings.gemini_api_key:
+    if not settings.btl_api_key:
         return {"status": "ok", "api_key_status": "missing"}
 
-    # Validate key with a lightweight SDK call
+    import httpx
     try:
-        list(gemini_client.client.models.list())
-        return {"status": "ok", "api_key_status": "valid"}
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://api.badtheorylabs.com/v1/models",
+                headers={"Authorization": f"Bearer {settings.btl_api_key}"},
+                timeout=10.0,
+            )
+            if resp.status_code == 200:
+                return {"status": "ok", "api_key_status": "valid"}
+            return {"status": "ok", "api_key_status": "invalid"}
     except Exception as e:
-        print(f"[HEALTH] Gemini API key invalid: {e}")
+        print(f"[HEALTH] BTL API key invalid: {e}")
         return {"status": "ok", "api_key_status": "invalid"}
 
 
