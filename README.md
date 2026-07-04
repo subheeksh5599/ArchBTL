@@ -283,6 +283,28 @@ Yes — click the share button to export as PNG or JPEG. Individual workflows ca
 
 ---
 
+## Deployment
+
+ArchBTL runs locally by default (`make run`). To deploy the backend to the cloud:
+
+### Render (free, 1-click)
+
+1. Fork this repo on GitHub
+2. Go to [render.com](https://render.com) → New Web Service → Connect your fork
+3. Render auto-detects `render.yaml`. Set the env var `BTL_API_KEY` in the dashboard
+4. Deploy. Backend will be at `https://archbtl.onrender.com`
+
+The free tier spins down after 15min of inactivity but freezes for 4 days (= the hackathon window).
+
+### Docker
+
+```bash
+docker compose up -d --build
+# Backend at http://localhost:52104
+```
+
+---
+
 ## Powered by
 
 <p align="center">

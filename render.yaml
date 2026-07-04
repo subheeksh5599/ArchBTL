@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: archbtl
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: BTL_API_KEY
+        sync: false
+      - key: PORT
+        value: "52104"
