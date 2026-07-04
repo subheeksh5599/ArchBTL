@@ -77,6 +77,23 @@ export const LLM_PROVIDERS: LLMProvider[] = [
         ],
     },
     {
+        id: 'btl-runtime',
+        displayName: 'BTL Runtime',
+        identifiers: ['btl', 'badtheorylabs'],
+        importPatterns: [
+            /api\.badtheorylabs\.com/i,
+            /badtheorylabs/i,
+            /btl-runtime/i,
+            /import\s+.*from\s+['"]openai['"].*api\.badtheorylabs/i,
+            /new\s+OpenAI\s*\(\{.*baseURL.*badtheorylabs/s,
+        ],
+        callPatterns: [
+            /v1\/chat\/completions.*badtheorylabs/i,
+            /v1\/embeddings.*badtheorylabs/i,
+            /v1\/responses.*badtheorylabs/i,
+        ],
+    },
+    {
         id: 'gemini',
         displayName: 'Google Gemini',
         identifiers: ['gemini', 'genai', 'generativeai'],

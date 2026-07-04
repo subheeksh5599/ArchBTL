@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
+
 class LocationMetadata(BaseModel):
     line: int
     type: str
@@ -8,17 +9,69 @@ class LocationMetadata(BaseModel):
     function: str
     variable: Optional[str] = None
 
+
 class FileMetadata(BaseModel):
     file: str
     locations: List[LocationMetadata]
     relatedFiles: List[str]
+
 
 class AnalyzeRequest(BaseModel):
     code: str
     file_paths: List[str]
     framework_hint: Optional[str] = None
     metadata: List[FileMetadata] = []
-    http_connections: Optional[str] = None  # HTTP connection context for service-to-service edges
+    http_connections: Optional[str] = None
+
+
+class CompareRequest(BaseModel):
+    code: str
+    file_paths: List[str]
+    metadata: List[FileMetadata] = []
+    http_connections: Optional[str] = None
+
+
+class SearchRequest(BaseModel):
+    query: str
+    limit: int = 10
+
+
+class SearchResult(BaseModel):
+    node_id: str
+    label: str
+    node_type: str
+    file: str
+    line: int
+    workflow: str
+    similarity: float
+
+
+class SearchResponse(BaseModel):
+    results: List[SearchResult]
+
+
+class EmbedRequest(BaseModel):
+    texts: List[str]
+
+
+class EmbedResponse(BaseModel):
+    embeddings: List[List[float]]
+
+
+class CompareResult(BaseModel):
+    model: str
+    graph: Optional[Any] = None
+    raw_output: str
+    usage: Optional[Any] = None
+    cost: Optional[Any] = None
+    error: Optional[str] = None
+
+
+class CompareResponse(BaseModel):
+    results: List[CompareResult]
+    consensus_score: float
+    disagreements: List[str]
+
 
 class SourceLocation(BaseModel):
     file: str
@@ -27,106 +80,100 @@ class SourceLocation(BaseModel):
 
 
 class EdgePayload(BaseModel):
-    """Data being passed along an edge"""
-    name: str              # Variable name: "request"
-    type: str              # Type: "AnalyzeRequest"
-    description: str       # "User's code submission"
+    name: str
+    type: str
+    description: str
 
 
 class GraphEdge(BaseModel):
     source: str
     target: str
-    label: Optional[str] = None              # Descriptive (only for decisions/API calls)
-    payload: Optional[EdgePayload] = None    # Data contract
-    condition: Optional[str] = None          # For decision branches: "if request.is_valid"
+    label: Optional[str] = None
+    payload: Optional[EdgePayload] = None
+    condition: Optional[str] = None
 
 
 class GraphNode(BaseModel):
     id: str
-    label: str                               # "Gemini 2.5 Flash", "Validate Request"
-    type: str                                # step, llm, decision
-    description: Optional[str] = None        # ≤10 words, omit if obvious from label
+    label: str
+    type: str
+    description: Optional[str] = None
     source: Optional[SourceLocation] = None
-
-    # LLM-specific
     model: Optional[str] = None
     temperature: Optional[float] = None
 
+
 class ComponentMetadata(BaseModel):
-    """Sub-component within a workflow (e.g., error handling, tool selection)."""
-    id: str  # "comp_1", "comp_2", etc.
-    name: str  # Descriptive name (e.g., "Error Handling", "Tool Selection")
+    id: str
+    name: str
     description: Optional[str] = None
-    nodeIds: List[str]  # Node IDs contained in this component
+    nodeIds: List[str]
+
 
 class WorkflowMetadata(BaseModel):
-    id: str  # "workflow_1", "workflow_2", etc.
-    name: str  # Descriptive name (e.g., "Document Analysis Pipeline")
+    id: str
+    name: str
     description: Optional[str] = None
-    nodeIds: List[str]  # List of node IDs that belong to this workflow
-    components: List[ComponentMetadata] = []  # Sub-components within workflow
+    nodeIds: List[str]
+    components: List[ComponentMetadata] = []
+
 
 class WorkflowGraph(BaseModel):
     nodes: List[GraphNode]
     edges: List[GraphEdge]
-    llms_detected: List[str] = []  # Computed client-side from node models
-    workflows: List[WorkflowMetadata] = []  # Workflow groupings identified by LLM
+    llms_detected: List[str] = []
+    workflows: List[WorkflowMetadata] = []
 
 
-# Metadata-only models (for incremental updates)
 class FunctionContext(BaseModel):
-    """Context about a single function for metadata generation."""
     name: str
     line: int
-    type: str  # llm, trigger, function
-    calls: List[str]  # Functions it calls
-    code: Optional[str] = None  # Optional function source
+    type: str
+    calls: List[str]
+    code: Optional[str] = None
+
 
 class FileStructureContext(BaseModel):
-    """Structure context for a file (from local tree-sitter analysis)."""
     filePath: str
     functions: List[FunctionContext]
     imports: List[str]
 
+
 class MetadataRequest(BaseModel):
-    """Request for metadata-only analysis."""
     files: List[FileStructureContext]
-    code: Optional[str] = None  # Optional: full code for better context
+    code: Optional[str] = None
+
 
 class FunctionMetadata(BaseModel):
-    """Metadata for a single function."""
     name: str
-    label: str  # Human-readable label
-    description: str  # Brief description
+    label: str
+    description: str
+
 
 class FileMetadataResult(BaseModel):
-    """Metadata result for a single file."""
     filePath: str
     functions: List[FunctionMetadata]
-    edgeLabels: Dict[str, str] = {}  # "fn1→fn2" → label
+    edgeLabels: Dict[str, str] = {}
 
-# Structure condensation models
+
 class CondenseRequest(BaseModel):
-    """Request to condense raw repo structure into workflow-relevant summary."""
-    raw_structure: str  # JSON string of tree-sitter extracted structure
+    raw_structure: str
 
 
-# Cost tracking models
 class TokenUsage(BaseModel):
-    """Token usage from Gemini API response."""
     input_tokens: int
     output_tokens: int
     total_tokens: int
     cached_tokens: int = 0
 
+
 class CostData(BaseModel):
-    """Cost calculation based on token usage."""
     input_cost: float
     output_cost: float
     total_cost: float
 
+
 class AnalyzeResponse(BaseModel):
-    """Enhanced analyze response with cost tracking."""
     graph: WorkflowGraph
     usage: Optional[TokenUsage] = None
-    cost: Optional[CostData] = None  # XML/text summary of workflows
+    cost: Optional[CostData] = None

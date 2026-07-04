@@ -98,23 +98,14 @@ declare function acquireVsCodeApi(): any;
 
     // Initial view - fit entire graph to screen
     setTimeout(() => {
-        // Reset layout to clean ELK positions
         formatGraph(updateGroupVisibility);
         renderMinimap();
         fitToScreen();
-        // Apply initial group collapse states (also populates directory)
         updateGroupVisibility();
-        // Update header stats
         updateSnapshotStats(state.workflowGroups, state.currentGraphData);
-
-        // Add export buttons to workflow groups
         addWorkflowExportButtons();
-
-        // Force edge paths update (component edges need this)
         updateEdgePaths();
         updateEdgeLabels();
-
-        // Double-update after frame to catch any late renders
         requestAnimationFrame(() => {
             updateEdgePaths();
             updateEdgeLabels();
@@ -128,5 +119,55 @@ declare function acquireVsCodeApi(): any;
         resizeTimeout = setTimeout(() => {
             renderMinimap();
         }, 150);
+    });
+
+    // Semantic search via BTL embeddings
+    const searchInput = document.getElementById('search-input') as HTMLInputElement | null;
+    const searchResultsEl = document.getElementById('search-results');
+    let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    function renderSearchResults(results: any[]) {
+        if (!searchResultsEl) return;
+        if (!results.length) { searchResultsEl.style.display = 'none'; return; }
+        searchResultsEl.style.display = 'block';
+        searchResultsEl.innerHTML = results.map((r: any) =>
+            '<div class="search-result-item" data-file="' + (r.file || '') + '" data-line="' + (r.line || 1) + '">' +
+            '<div class="sr-label">' + (r.label || '') + '</div>' +
+            '<div class="sr-meta">' + (r.node_type || '') + ' &middot; ' + ((r.similarity || 0) * 100).toFixed(0) + '% match</div>' +
+            '<div class="sr-file">' + (r.file || '') + ':' + (r.line || 1) + '</div>' +
+            '</div>'
+        ).join('');
+        searchResultsEl.querySelectorAll('.search-result-item').forEach(function(el) {
+            el.addEventListener('click', function() {
+                var f = (el as HTMLElement).dataset.file || '';
+                var l = parseInt((el as HTMLElement).dataset.line || '1');
+                vscode.postMessage({ command: 'openFile', file: f, line: l });
+                if (searchResultsEl) { searchResultsEl.style.display = 'none'; searchResultsEl.innerHTML = ''; }
+                if (searchInput) searchInput.value = '';
+            });
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            var q = searchInput.value.trim();
+            if (!q) { if (searchResultsEl) { searchResultsEl.style.display = 'none'; searchResultsEl.innerHTML = ''; } return; }
+            searchTimeout = setTimeout(function() {
+                fetch('http://localhost:52104/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: q, limit: 8 }),
+                }).then(function(r) { return r.json(); }).then(function(d) {
+                    renderSearchResults(d.results || []);
+                }).catch(function() {});
+            }, 400);
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (searchResultsEl && searchInput && !searchInput.contains(e.target as Node) && !searchResultsEl.contains(e.target as Node)) {
+            searchResultsEl.style.display = 'none';
+        }
     });
 })();

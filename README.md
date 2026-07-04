@@ -204,6 +204,30 @@ Analysis results are cached locally. Re-analysis only happens when code changes.
 
 ---
 
+## BTL Runtime Usage
+
+ArchBTL is built entirely on the BTL Runtime gateway. Here's exactly how it consumes the platform:
+
+| Endpoint | Method | Purpose | Frequency |
+|----------|--------|---------|-----------|
+| `/v1/chat/completions` | `POST` | LLM-powered workflow detection & metadata generation (model: `btl-2`) | Per analysis batch |
+| `/v1/embeddings` | `POST` | Semantic indexing of detected workflow nodes + real-time search across analyzed graphs (model: `text-embedding-3-small`) | On analyze + per search query |
+| `/v1/models` | `GET` | Health check validation of BTL API key | On extension activation |
+
+**Why the gateway matters for ArchBTL:**
+
+1. **Single API surface, multiple capabilities.** ArchBTL calls both chat completions and embeddings through one base URL — no provider switching, no separate SDKs. The gateway handles routing internally.
+
+2. **Multi-model comparison via `/analyze/compare`.** The compare endpoint sends the same code through the gateway and captures attributed results. When BTL Routes to different backends, ArchBTL diffs the output and reports structural disagreements. This is a capabilities demonstration that would require 2+ separate API keys without the gateway.
+
+3. **Embedding-powered semantic search.** Every analyzed workflow node is embedded through BTL Runtime and stored in an in-memory vector index. Developers can search for "authentication" or "error handling" and jump directly to the relevant node in the graph. This turns a static visualization into a queryable knowledge base.
+
+4. **Cost transparency.** Every BTL Runtime call is metered, tracked, and surfaced in the VSCode output panel with per-batch token usage and cost breakdowns. Users see exactly what they're spending.
+
+5. **OpenAI-compatible, BTL-native.** ArchBTL was ported from Google Gemini to BTL Runtime by changing exactly one file (`btl_client.py`). The OpenAI-compatible surface made the migration trivial — proving the gateway's interoperability value.
+
+---
+
 ## FAQ
 
 <details>
@@ -215,11 +239,14 @@ Yes — the code you choose to analyze is sent to the BTL Runtime API for LLM-po
 <details>
 <summary><strong>Which BTL Runtime endpoints does ArchBTL use?</strong></summary>
 
-`/v1/chat/completions` — for workflow analysis, metadata generation, and structure condensation. All requests use the `btl-2` model with temperature 0.0 for deterministic output.
+Three endpoints: `/v1/chat/completions` for workflow detection and metadata generation, `/v1/embeddings` for semantic search indexing, and `/v1/models` for health checks. See the table above for details.
 </details>
 
 <details>
-<summary><strong>Can I use this without BTL Runtime?</strong></summary>
+<summary><strong>What's the /analyze/compare endpoint?</strong></summary>
+
+It sends the same code through BTL Runtime to generate workflow graphs, then compares outputs for structural consistency. When multiple backends agree on the graph structure, you get high confidence. When they disagree, ArchBTL flags the differences. This is only possible because of BTL Runtime's multi-provider gateway architecture.
+</details>
 
 No — the LLM-powered workflow detection is the core feature. Static analysis alone can find LLM call patterns, but can't group them into meaningful workflows or generate human-readable labels.
 </details>

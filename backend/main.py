@@ -1,12 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import math
 
 from models import (
     AnalyzeRequest, WorkflowGraph,
     MetadataRequest, FileMetadataResult, FunctionMetadata,
     CondenseRequest,
-    TokenUsage, CostData, AnalyzeResponse
+    TokenUsage, CostData, AnalyzeResponse,
+    SearchRequest, SearchResult, SearchResponse,
+    EmbedRequest, EmbedResponse,
+    CompareRequest, CompareResult, CompareResponse,
 )
 from prompts import build_metadata_only_prompt, USE_MERMAID_FORMAT
 from mermaid_parser import parse_mermaid_response
@@ -213,6 +217,155 @@ async def condense_structure(request: CondenseRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Structure condensation failed: {str(e)}")
+
+
+# ── In-memory search index ──────────────────────────────────
+_stored_workflows: list[dict] = []
+
+
+def _cosine_similarity(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    if na == 0 or nb == 0:
+        return 0.0
+    return dot / (na * nb)
+
+
+@app.post("/search", response_model=SearchResponse)
+async def search_workflows(request: SearchRequest):
+    if not settings.btl_api_key:
+        raise HTTPException(status_code=503, detail="BTL API key not configured")
+    if not _stored_workflows:
+        return SearchResponse(results=[])
+
+    try:
+        query_emb = await btl_client.generate_embedding(request.query)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
+
+    scored = []
+    for doc in _stored_workflows:
+        sim = _cosine_similarity(query_emb, doc["embedding"])
+        scored.append((sim, doc))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    results = []
+    for sim, doc in scored[:request.limit]:
+        results.append(SearchResult(
+            node_id=doc["node_id"],
+            label=doc["label"],
+            node_type=doc["node_type"],
+            file=doc["file"],
+            line=doc["line"],
+            workflow=doc.get("workflow", ""),
+            similarity=round(sim, 4),
+        ))
+    return SearchResponse(results=results)
+
+
+@app.post("/embed", response_model=EmbedResponse)
+async def embed_texts(request: EmbedRequest):
+    if not settings.btl_api_key:
+        raise HTTPException(status_code=503, detail="BTL API key not configured")
+    try:
+        embeddings = await btl_client.generate_embeddings(request.texts)
+        return EmbedResponse(embeddings=embeddings)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
+
+
+def _strip_mermaid(result: str) -> str:
+    clean = result.strip()
+    if clean.startswith("```"):
+        clean = clean.split("\n", 1)[1] if "\n" in clean else clean[3:]
+    if clean.endswith("```"):
+        clean = clean.rsplit("```", 1)[0]
+    return clean.strip()
+
+
+@app.post("/analyze/compare", response_model=CompareResponse)
+async def analyze_compare(request: CompareRequest):
+    if not settings.btl_api_key:
+        raise HTTPException(status_code=503, detail="BTL API key not configured")
+
+    metadata_dicts = [m.model_dump() for m in request.metadata] if request.metadata else None
+
+    try:
+        raw_results = await btl_client.analyze_workflow_compare(
+            request.code, metadata_dicts, request.http_connections
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Compare analysis failed: {str(e)}")
+
+    compare_results = []
+    disagreements = []
+    parsed_graphs = []
+
+    for model_name, text, usage, cost, error in raw_results:
+        graph = None
+        if not error and text:
+            try:
+                cleaned = _strip_mermaid(text)
+                graph = parse_mermaid_response(cleaned)
+                parsed_graphs.append(graph)
+            except Exception:
+                pass
+
+        compare_results.append(CompareResult(
+            model=model_name,
+            graph=graph.model_dump() if graph else None,
+            raw_output=text,
+            usage=usage.model_dump(),
+            cost=cost.model_dump(),
+            error=error,
+        ))
+
+    # Compute consensus: compare node counts across successful parses
+    if len(parsed_graphs) >= 2:
+        node_counts = [len(g.nodes) for g in parsed_graphs]
+        nc_set = set(node_counts)
+        consensus_score = 1.0 - (len(nc_set) - 1) / max(1, len(parsed_graphs))
+        if len(nc_set) > 1:
+            for i, (c, g) in enumerate(zip(node_counts, parsed_graphs)):
+                if c != max(set(node_counts), key=node_counts.count):
+                    disagreements.append(
+                        f"{compare_results[i].model}: {c} nodes (majority has {max(set(node_counts), key=node_counts.count)})"
+                    )
+    else:
+        consensus_score = 1.0 if len(parsed_graphs) == 1 else 0.0
+
+    # Store embeddings for all detected nodes after analyze
+    if parsed_graphs:
+        try:
+            texts_to_embed = []
+            meta = []
+            for g in parsed_graphs[:1]:
+                for node in g.nodes:
+                    f = node.source.file if node.source else "unknown"
+                    ln = node.source.line if node.source else 0
+                    texts_to_embed.append(f"{node.type} {node.label} {node.description or ''} {f}")
+                    meta.append({
+                        "node_id": node.id,
+                        "label": node.label,
+                        "node_type": node.type,
+                        "file": f,
+                        "line": ln,
+                    })
+            if texts_to_embed:
+                embs = await btl_client.generate_embeddings(texts_to_embed)
+                for met, emb in zip(meta, embs):
+                    met["embedding"] = emb
+                _stored_workflows.clear()
+                _stored_workflows.extend(meta)
+        except Exception:
+            pass
+
+    return CompareResponse(
+        results=compare_results,
+        consensus_score=round(consensus_score, 2),
+        disagreements=disagreements,
+    )
 
 
 @app.get("/health")

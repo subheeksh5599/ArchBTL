@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+import json
 import httpx
 from config import settings
 from prompts import SYSTEM_INSTRUCTION, build_user_prompt, CONDENSATION_SYSTEM_PROMPT
@@ -93,6 +95,42 @@ class BTLClient:
         if self.client is None:
             self.client = httpx.AsyncClient()
 
+    # ── Embeddings ───────────────────────────────────────────────
+
+    async def generate_embedding(self, text: str) -> list[float]:
+        await self._ensure_client()
+        payload = {
+            "model": "text-embedding-3-small",
+            "input": text,
+        }
+        resp = await self.client.post(
+            f"{BTL_BASE}/embeddings",
+            json=payload,
+            headers=_headers(),
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["data"][0]["embedding"]
+
+    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
+        await self._ensure_client()
+        payload = {
+            "model": "text-embedding-3-small",
+            "input": texts,
+        }
+        resp = await self.client.post(
+            f"{BTL_BASE}/embeddings",
+            json=payload,
+            headers=_headers(),
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return [item["embedding"] for item in data["data"]]
+
+    # ── Workflow Analysis ────────────────────────────────────────
+
     async def analyze_workflow(
         self,
         code: str,
@@ -117,6 +155,51 @@ class BTLClient:
         cost = calculate_cost(usage)
         return text, usage, cost
 
+    # ── Multi-Model Comparison ───────────────────────────────────
+
+    async def analyze_with_model(
+        self,
+        code: str,
+        metadata: list = None,
+        http_connections: str = None,
+    ) -> tuple[str, TokenUsage, CostData]:
+        await self._ensure_client()
+        user_prompt = build_user_prompt(code, metadata, http_connections)
+        data = await _chat_completion(
+            self.client,
+            system_prompt=SYSTEM_INSTRUCTION,
+            user_prompt=user_prompt,
+            max_tokens=65536,
+            temperature=0.0,
+        )
+        text = data["choices"][0]["message"]["content"]
+        usage = extract_usage(data)
+        cost = calculate_cost(usage)
+        return text, usage, cost
+
+    async def analyze_workflow_compare(
+        self,
+        code: str,
+        metadata: list = None,
+        http_connections: str = None,
+    ) -> list[tuple[str, str, TokenUsage, CostData, str | None]]:
+        """
+        Run analysis through BTL Runtime. Returns results with model attribution.
+        BTL Runtime may route to different backends — we capture what's used.
+        """
+        results = []
+        try:
+            text, usage, cost = await self.analyze_with_model(
+                code, metadata, http_connections
+            )
+            results.append((BTL_MODEL, text, usage, cost, None))
+        except Exception as e:
+            results.append((BTL_MODEL, "", TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0), CostData(input_cost=0, output_cost=0, total_cost=0), str(e)))
+
+        return results
+
+    # ── Structure Condensation ───────────────────────────────────
+
     async def condense_repo_structure(
         self, raw_structure: str
     ) -> tuple[str, TokenUsage, CostData]:
@@ -140,6 +223,8 @@ Output a condensed workflow structure following the system instructions."""
         usage = extract_usage(data)
         cost = calculate_cost(usage)
         return text, usage, cost
+
+    # ── Metadata Generation ──────────────────────────────────────
 
     async def generate_metadata(
         self, prompt: str

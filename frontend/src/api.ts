@@ -154,4 +154,52 @@ export class APIClient {
             cost: res.data.cost as CostData | undefined
         };
     }
+
+    /**
+     * Multi-model comparison — sends the same code through BTL Runtime
+     * and compares workflow graphs across available backends.
+     */
+    async compareWorkflow(
+        code: string,
+        filePaths: string[],
+        metadata?: FileMetadata[],
+        httpConnections?: string
+    ): Promise<{
+        results: Array<{
+            model: string;
+            graph: WorkflowGraph | null;
+            raw_output: string;
+            usage?: TokenUsage;
+            cost?: CostData;
+            error?: string;
+        }>;
+        consensus_score: number;
+        disagreements: string[];
+    }> {
+        const res = await this.client.post('/analyze/compare', {
+            code,
+            file_paths: filePaths,
+            metadata: metadata || [],
+            http_connections: httpConnections
+        });
+        return res.data;
+    }
+
+    /**
+     * Semantic search across analyzed workflow nodes using BTL embeddings.
+     */
+    async searchWorkflows(query: string, limit: number = 10): Promise<{
+        results: Array<{
+            node_id: string;
+            label: string;
+            node_type: string;
+            file: string;
+            line: number;
+            workflow: string;
+            similarity: number;
+        }>;
+    }> {
+        const res = await this.client.post('/search', { query, limit });
+        return res.data;
+    }
 }
