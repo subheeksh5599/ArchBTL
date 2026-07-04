@@ -50,14 +50,6 @@ class SearchResponse(BaseModel):
     results: List[SearchResult]
 
 
-class EmbedRequest(BaseModel):
-    texts: List[str]
-
-
-class EmbedResponse(BaseModel):
-    embeddings: List[List[float]]
-
-
 class CompareResult(BaseModel):
     model: str
     graph: Optional[Any] = None

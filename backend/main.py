@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
-import math
 
 from models import (
     AnalyzeRequest, WorkflowGraph,
@@ -9,7 +8,6 @@ from models import (
     CondenseRequest,
     TokenUsage, CostData, AnalyzeResponse,
     SearchRequest, SearchResult, SearchResponse,
-    EmbedRequest, EmbedResponse,
     CompareRequest, CompareResult, CompareResponse,
 )
 from prompts import build_metadata_only_prompt, USE_MERMAID_FORMAT
@@ -136,7 +134,20 @@ Please re-analyze the code and output in the CORRECT format."""
             if not graph.nodes:
                 return AnalyzeResponse(graph=graph, usage=total_usage, cost=total_cost)
 
+            # Store nodes for semantic search
+            _stored_nodes.clear()
             for node in graph.nodes:
+                f = node.source.file if node.source else "unknown"
+                ln = node.source.line if node.source else 0
+                _stored_nodes.append({
+                    "node_id": node.id,
+                    "label": node.label,
+                    "node_type": node.type,
+                    "file": f,
+                    "line": ln,
+                    "description": node.description or "",
+                    "workflow": graph.workflows[0].name if graph.workflows else "",
+                })
                 if node.source and node.source.file:
                     node.source.file = fix_file_path(node.source.file, request.file_paths)
 
@@ -220,59 +231,33 @@ async def condense_structure(request: CondenseRequest):
 
 
 # ── In-memory search index ──────────────────────────────────
-_stored_workflows: list[dict] = []
-
-
-def _cosine_similarity(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    if na == 0 or nb == 0:
-        return 0.0
-    return dot / (na * nb)
+_stored_nodes: list[dict] = []
 
 
 @app.post("/search", response_model=SearchResponse)
 async def search_workflows(request: SearchRequest):
     if not settings.btl_api_key:
         raise HTTPException(status_code=503, detail="BTL API key not configured")
-    if not _stored_workflows:
+    if not _stored_nodes:
         return SearchResponse(results=[])
 
     try:
-        query_emb = await btl_client.generate_embedding(request.query)
+        matches = await btl_client.semantic_search(request.query, _stored_nodes, request.limit)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
-    scored = []
-    for doc in _stored_workflows:
-        sim = _cosine_similarity(query_emb, doc["embedding"])
-        scored.append((sim, doc))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
     results = []
-    for sim, doc in scored[:request.limit]:
+    for doc in matches:
         results.append(SearchResult(
-            node_id=doc["node_id"],
-            label=doc["label"],
-            node_type=doc["node_type"],
-            file=doc["file"],
-            line=doc["line"],
+            node_id=doc.get("node_id", ""),
+            label=doc.get("label", ""),
+            node_type=doc.get("node_type", ""),
+            file=doc.get("file", "unknown"),
+            line=doc.get("line", 0),
             workflow=doc.get("workflow", ""),
-            similarity=round(sim, 4),
+            similarity=1.0,
         ))
     return SearchResponse(results=results)
-
-
-@app.post("/embed", response_model=EmbedResponse)
-async def embed_texts(request: EmbedRequest):
-    if not settings.btl_api_key:
-        raise HTTPException(status_code=503, detail="BTL API key not configured")
-    try:
-        embeddings = await btl_client.generate_embeddings(request.texts)
-        return EmbedResponse(embeddings=embeddings)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
 
 
 def _strip_mermaid(result: str) -> str:
@@ -335,31 +320,22 @@ async def analyze_compare(request: CompareRequest):
     else:
         consensus_score = 1.0 if len(parsed_graphs) == 1 else 0.0
 
-    # Store embeddings for all detected nodes after analyze
+    # Store nodes for search after analyze
     if parsed_graphs:
-        try:
-            texts_to_embed = []
-            meta = []
-            for g in parsed_graphs[:1]:
-                for node in g.nodes:
-                    f = node.source.file if node.source else "unknown"
-                    ln = node.source.line if node.source else 0
-                    texts_to_embed.append(f"{node.type} {node.label} {node.description or ''} {f}")
-                    meta.append({
-                        "node_id": node.id,
-                        "label": node.label,
-                        "node_type": node.type,
-                        "file": f,
-                        "line": ln,
-                    })
-            if texts_to_embed:
-                embs = await btl_client.generate_embeddings(texts_to_embed)
-                for met, emb in zip(meta, embs):
-                    met["embedding"] = emb
-                _stored_workflows.clear()
-                _stored_workflows.extend(meta)
-        except Exception:
-            pass
+        _stored_nodes.clear()
+        for g in parsed_graphs[:1]:
+            for node in g.nodes:
+                f = node.source.file if node.source else "unknown"
+                ln = node.source.line if node.source else 0
+                _stored_nodes.append({
+                    "node_id": node.id,
+                    "label": node.label,
+                    "node_type": node.type,
+                    "file": f,
+                    "line": ln,
+                    "description": node.description or "",
+                    "workflow": g.workflows[0].name if g.workflows else "",
+                })
 
     return CompareResponse(
         results=compare_results,

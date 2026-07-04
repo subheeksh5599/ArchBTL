@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import json
 import httpx
 from config import settings
@@ -8,6 +7,7 @@ from models import TokenUsage, CostData
 
 BTL_BASE = "https://api.badtheorylabs.com/v1"
 BTL_MODEL = "btl-2"
+MAX_TOKENS = 16384
 
 INPUT_PRICE_PER_1M = 0.15
 OUTPUT_PRICE_PER_1M = 0.60
@@ -44,7 +44,7 @@ async def _chat_completion(
     client: httpx.AsyncClient,
     system_prompt: str,
     user_prompt: str,
-    max_tokens: int = 65536,
+    max_tokens: int = MAX_TOKENS,
     temperature: float = 0.0,
 ) -> dict:
     payload = {
@@ -77,7 +77,7 @@ async def _chat_completion(
             choice = data["choices"][0]
             finish = choice.get("finish_reason", "stop")
             if finish == "length":
-                raise Exception("Output exceeded token limit. Try reducing batch size.")
+                raise Exception("Output exceeded token limit.")
             return data
         except httpx.HTTPStatusError:
             raise
@@ -95,42 +95,6 @@ class BTLClient:
         if self.client is None:
             self.client = httpx.AsyncClient()
 
-    # ── Embeddings ───────────────────────────────────────────────
-
-    async def generate_embedding(self, text: str) -> list[float]:
-        await self._ensure_client()
-        payload = {
-            "model": "text-embedding-3-small",
-            "input": text,
-        }
-        resp = await self.client.post(
-            f"{BTL_BASE}/embeddings",
-            json=payload,
-            headers=_headers(),
-            timeout=30.0,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["data"][0]["embedding"]
-
-    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
-        await self._ensure_client()
-        payload = {
-            "model": "text-embedding-3-small",
-            "input": texts,
-        }
-        resp = await self.client.post(
-            f"{BTL_BASE}/embeddings",
-            json=payload,
-            headers=_headers(),
-            timeout=30.0,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return [item["embedding"] for item in data["data"]]
-
-    # ── Workflow Analysis ────────────────────────────────────────
-
     async def analyze_workflow(
         self,
         code: str,
@@ -147,29 +111,7 @@ class BTLClient:
             self.client,
             system_prompt=SYSTEM_INSTRUCTION,
             user_prompt=user_prompt,
-            max_tokens=65536,
-            temperature=0.0,
-        )
-        text = data["choices"][0]["message"]["content"]
-        usage = extract_usage(data)
-        cost = calculate_cost(usage)
-        return text, usage, cost
-
-    # ── Multi-Model Comparison ───────────────────────────────────
-
-    async def analyze_with_model(
-        self,
-        code: str,
-        metadata: list = None,
-        http_connections: str = None,
-    ) -> tuple[str, TokenUsage, CostData]:
-        await self._ensure_client()
-        user_prompt = build_user_prompt(code, metadata, http_connections)
-        data = await _chat_completion(
-            self.client,
-            system_prompt=SYSTEM_INSTRUCTION,
-            user_prompt=user_prompt,
-            max_tokens=65536,
+            max_tokens=MAX_TOKENS,
             temperature=0.0,
         )
         text = data["choices"][0]["message"]["content"]
@@ -183,22 +125,71 @@ class BTLClient:
         metadata: list = None,
         http_connections: str = None,
     ) -> list[tuple[str, str, TokenUsage, CostData, str | None]]:
-        """
-        Run analysis through BTL Runtime. Returns results with model attribution.
-        BTL Runtime may route to different backends — we capture what's used.
-        """
         results = []
         try:
-            text, usage, cost = await self.analyze_with_model(
-                code, metadata, http_connections
+            text, usage, cost = await self.analyze_workflow(
+                code, metadata, None, http_connections
             )
             results.append((BTL_MODEL, text, usage, cost, None))
         except Exception as e:
             results.append((BTL_MODEL, "", TokenUsage(input_tokens=0, output_tokens=0, total_tokens=0), CostData(input_cost=0, output_cost=0, total_cost=0), str(e)))
-
         return results
 
-    # ── Structure Condensation ───────────────────────────────────
+    async def semantic_search(
+        self, query: str, nodes: list[dict], limit: int = 8
+    ) -> list[dict]:
+        await self._ensure_client()
+        if not nodes:
+            return []
+
+        node_list = []
+        for i, n in enumerate(nodes):
+            node_list.append(
+                f"[{i}] type={n.get('node_type','')} label={n.get('label','')} "
+                f"file={n.get('file','')} desc={n.get('description','')}"
+            )
+
+        prompt = f"""Given this search query: "{query}"
+
+And this list of workflow nodes:
+{chr(10).join(node_list[:100])}
+
+Return a JSON array of the most relevant node INDICES (0-based). 
+Format: {{"matches": [3, 7, 12]}}. Limit to top {limit} matches.
+Only return indices that are clearly relevant to the query. Skip irrelevant ones."""
+
+        try:
+            data = await _chat_completion(
+                self.client,
+                system_prompt="You are a semantic search engine. Return only valid JSON.",
+                user_prompt=prompt,
+                max_tokens=512,
+                temperature=0.0,
+            )
+            text = data["choices"][0]["message"]["content"].strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+            if text.endswith("```"):
+                text = text.rsplit("```", 1)[0]
+            result = json.loads(text)
+            indices = result.get("matches", [])
+            return [nodes[i] for i in indices if 0 <= i < len(nodes)]
+        except Exception:
+            # Fallback: substring match
+            q = query.lower()
+            scored = []
+            for n in nodes:
+                label = n.get("label", "").lower()
+                f = n.get("file", "").lower()
+                score = 0
+                if q in label:
+                    score += 3
+                if q in f:
+                    score += 1
+                if score > 0:
+                    scored.append((score, n))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            return [n for _, n in scored[:limit]]
 
     async def condense_repo_structure(
         self, raw_structure: str
@@ -223,8 +214,6 @@ Output a condensed workflow structure following the system instructions."""
         usage = extract_usage(data)
         cost = calculate_cost(usage)
         return text, usage, cost
-
-    # ── Metadata Generation ──────────────────────────────────────
 
     async def generate_metadata(
         self, prompt: str
