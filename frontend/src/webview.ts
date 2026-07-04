@@ -46,7 +46,7 @@ export class WebviewManager {
                 this.pendingMessages.push(message);
             }
         } else {
-            console.log(`[Codag] Message dropped (panel closed): ${message.command}`);
+            console.log(`[ArchBTL] Message dropped (panel closed): ${message.command}`);
         }
     }
 
@@ -232,13 +232,13 @@ export class WebviewManager {
                         const fileUri = vscode.Uri.file(filePath);
                         const document = await vscode.workspace.openTextDocument(fileUri);
 
-                        // Open in a column different from Codag panel
-                        // Find existing text editors to reuse, or create in column that's not Codag's
-                        const codagColumn = this.panel?.viewColumn || vscode.ViewColumn.Two;
+                        // Open in a column different from ArchBTL panel
+                        // Find existing text editors to reuse, or create in column that's not ArchBTL's
+                        const archbtlColumn = this.panel?.viewColumn || vscode.ViewColumn.Two;
                         let targetColumn = vscode.ViewColumn.One;
 
-                        // If Codag is in column 1, use column 2; otherwise use column 1
-                        if (codagColumn === vscode.ViewColumn.One) {
+                        // If ArchBTL is in column 1, use column 2; otherwise use column 1
+                        if (archbtlColumn === vscode.ViewColumn.One) {
                             targetColumn = vscode.ViewColumn.Two;
                         }
 
@@ -261,7 +261,7 @@ export class WebviewManager {
                         vscode.window.showErrorMessage(`Could not open file: ${error.message}`);
                     }
                 } else if (message.command === 'refreshAnalysis') {
-                    vscode.commands.executeCommand('codag.refresh');
+                    vscode.commands.executeCommand('archbtl.refresh');
                 } else if (message.command === 'nodeSelected') {
                     this.updateViewState({
                         selectedNodeId: message.nodeId,
@@ -290,12 +290,12 @@ export class WebviewManager {
                     }
                 } else if (message.command === 'openAnalyzePanel') {
                     // Just show the file picker on the existing graph
-                    vscode.commands.executeCommand('codag.showFilePicker');
+                    vscode.commands.executeCommand('archbtl.showFilePicker');
                 } else if (message.command === 'clearCacheAndReanalyze') {
                     // Clear cache for selected files and reanalyze them
-                    vscode.commands.executeCommand('codag.clearCacheAndReanalyze', message.paths);
+                    vscode.commands.executeCommand('archbtl.clearCacheAndReanalyze', message.paths);
                 } else if (message.command === 'retryAnalysis') {
-                    vscode.commands.executeCommand('codag.open');
+                    vscode.commands.executeCommand('archbtl.open');
                 } else if (message.command === 'webviewReady') {
                     // Webview is ready to receive messages
                     this.onWebviewReady();
@@ -361,8 +361,8 @@ export class WebviewManager {
         // Ensure panel is created
         if (!this.panel) {
             this.panel = vscode.window.createWebviewPanel(
-                'codag',
-                'LLM Architecture',
+                'archbtl',
+                'BTL Architecture',
                 vscode.ViewColumn.Two,
                 {
                     enableScripts: true,
@@ -417,8 +417,8 @@ export class WebviewManager {
     showLoading(message: string) {
         if (!this.panel) {
             this.panel = vscode.window.createWebviewPanel(
-                'codag',
-                'LLM Architecture',
+                'archbtl',
+                'BTL Architecture',
                 vscode.ViewColumn.Two,
                 {
                     enableScripts: true,
@@ -568,8 +568,8 @@ export class WebviewManager {
     show(graph: WorkflowGraph, loadingOptions?: LoadingOptions) {
         if (!this.panel) {
             this.panel = vscode.window.createWebviewPanel(
-                'codag',
-                'LLM Architecture',
+                'archbtl',
+                'BTL Architecture',
                 vscode.ViewColumn.Two,
                 {
                     enableScripts: true,

@@ -1,18 +1,18 @@
 {
-  "name": "codag",
-  "displayName": "Codag - Visualize LLM Workflows",
-  "description": "Visualize AI/LLM workflows in your codebase",
-  "version": "0.2.5",
+  "name": "archbtl",
+  "displayName": "ArchBTL - LLM Architecture Visualizer",
+  "description": "Visualize AI/LLM workflows in your codebase powered by BTL Runtime",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/michaelzixizhou/codag"
+    "url": "https://github.com/subheeksh5599/ArchBTL"
   },
   "bugs": {
-    "url": "https://github.com/michaelzixizhou/codag/issues"
+    "url": "https://github.com/subheeksh5599/ArchBTL/issues"
   },
-  "homepage": "https://github.com/michaelzixizhou/codag#readme",
-  "publisher": "codag",
+  "homepage": "https://github.com/subheeksh5599/ArchBTL#readme",
+  "publisher": "archbtl",
   "icon": "media/icon-chat.png",
   "engines": {
     "vscode": "^1.95.0"
@@ -28,31 +28,29 @@
     "workflow",
     "visualization",
     "dag",
-    "langchain",
-    "openai",
-    "anthropic",
-    "gemini",
-    "agent"
+    "btl",
+    "btl-runtime",
+    "architecture"
   ],
   "galleryBanner": {
-    "color": "#1e1e2e",
+    "color": "#0f172a",
     "theme": "dark"
   },
   "activationEvents": [
-    "onCommand:codag.open"
+    "onCommand:archbtl.open"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "codag.open",
-        "title": "Codag: Open"
+        "command": "archbtl.open",
+        "title": "ArchBTL: Open"
       }
     ],
     "configuration": {
-      "title": "Codag",
+      "title": "ArchBTL",
       "properties": {
-        "codag.apiUrl": {
+        "archbtl.apiUrl": {
           "type": "string",
           "default": "http://localhost:52104",
           "description": "Backend API URL"

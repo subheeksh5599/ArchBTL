@@ -1,5 +1,5 @@
 /**
- * Cost tracking utilities for LLM API usage
+ * Cost tracking utilities for LLM API usage with BTL Runtime
  */
 import * as vscode from 'vscode';
 import { CostOperation, CostReport, TokenUsage, CostData } from './types';
@@ -13,7 +13,7 @@ export function estimateTokens(text: string): number {
 }
 
 /**
- * Calculate cost for Gemini 2.5 Flash based on input/output tokens
+ * Calculate cost for BTL Runtime based on input/output tokens
  */
 export function calculateCost(inputTokens: number, outputTokens: number): number {
     const inputCost = (inputTokens / 1_000_000) * CONFIG.PRICING.INPUT_PER_1M;
@@ -89,6 +89,7 @@ export class CostAggregator {
  * Assumes:
  * - Input = file content + prompt overhead (~3000 tokens)
  * - Output = ~2000 tokens per file (typical node/edge output)
+ * BTL Runtime pricing: $0.15/M input, $0.60/M output
  */
 export function estimateAnalysisCost(files: { content: string }[]): {
     inputTokens: number;

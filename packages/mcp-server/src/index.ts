@@ -7,37 +7,29 @@ import { listWorkflows, getWorkflow, getNode, getFileContext, searchGraph, getTa
 
 const workspacePath = process.argv[2];
 if (!workspacePath) {
-    process.stderr.write("Usage: codag-mcp <workspace-path>\n");
+    process.stderr.write("Usage: archbtl-mcp <workspace-path>\n");
     process.exit(1);
 }
 
 const loader = new GraphLoader(workspacePath);
 
 const server = new McpServer({
-    name: "codag",
-    version: "0.1.0",
+    name: "archbtl",
+    version: "1.0.0",
 });
-
-// ---------------------------------------------------------------------------
-// Resources (auto-injected into system prompt by supporting clients)
-// ---------------------------------------------------------------------------
 
 server.resource(
     "graph-summary",
-    "codag://graph/summary",
+    "archbtl://graph/summary",
     { description: "Compact summary of all LLM/AI workflows in the codebase. Auto-included in context." },
     async () => ({
         contents: [{
-            uri: "codag://graph/summary",
+            uri: "archbtl://graph/summary",
             mimeType: "text/markdown",
             text: graphSummaryResource(loader.getIndex()),
         }],
     })
 );
-
-// ---------------------------------------------------------------------------
-// Tools
-// ---------------------------------------------------------------------------
 
 server.tool(
     "get_task_context",

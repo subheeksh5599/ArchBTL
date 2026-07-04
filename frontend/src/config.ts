@@ -1,5 +1,5 @@
 /**
- * Centralized configuration constants for the Codag extension
+ * Centralized configuration constants for the ArchBTL extension
  *
  * All magic numbers and configurable values should be defined here.
  * This makes the codebase easier to tune and maintain.
@@ -12,15 +12,15 @@ export const CONFIG = {
     BATCH: {
         /** Maximum number of files to include in a single analysis batch */
         MAX_SIZE: 5,
-        /** Maximum tokens per batch (limits output size - Gemini output capped at 65k tokens) */
+        /** Maximum tokens per batch (limits output size - BTL output capped at 65k tokens) */
         MAX_TOKENS: 100_000,
     },
 
     /**
-     * API concurrency settings (Gemini Flash: 1500 RPM, 4M TPM)
+     * API concurrency settings (BTL Runtime)
      */
     CONCURRENCY: {
-        /** Maximum parallel Gemini API requests */
+        /** Maximum parallel BTL API requests */
         MAX_PARALLEL: 10,
     },
 
@@ -43,14 +43,14 @@ export const CONFIG = {
     },
 
     /**
-     * Gemini 2.5 Flash pricing (per 1M tokens)
-     * Source: https://ai.google.dev/pricing
+     * BTL Runtime pricing (per 1M tokens)
+     * Source: https://badtheorylabs.com/runtime
      */
     PRICING: {
-        /** Input token cost per 1M tokens (prompts ≤128K) */
-        INPUT_PER_1M: 0.075,
-        /** Output token cost per 1M tokens (prompts ≤128K) */
-        OUTPUT_PER_1M: 0.30,
+        /** Input token cost per 1M tokens */
+        INPUT_PER_1M: 0.15,
+        /** Output token cost per 1M tokens */
+        OUTPUT_PER_1M: 0.60,
     },
 
     /**

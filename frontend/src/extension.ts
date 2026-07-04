@@ -33,7 +33,7 @@ import {
     initCallGraphPersistence
 } from './analysis/state';
 
-const outputChannel = vscode.window.createOutputChannel('Codag');
+const outputChannel = vscode.window.createOutputChannel('ArchBTL');
 
 // Module-level cache reference for deactivate flush
 let cacheInstance: CacheManager | null = null;
@@ -67,11 +67,11 @@ async function registerMcpServer(extensionPath: string, workspacePath: string): 
     }
 
     const servers = (existing.mcpServers ?? {}) as Record<string, unknown>;
-    if (servers.codag) {
+    if (servers.archbtl) {
         return; // Already registered
     }
 
-    servers.codag = {
+    servers.archbtl = {
         command: 'node',
         args: [mcpServerPath, workspacePath],
     };
@@ -95,7 +95,7 @@ function log(message: string): void {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-    log('Codag activating...');
+    log('ArchBTL activating...');
 
     // Register MCP server config for coding agents (Cursor, Claude Code, etc.)
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -114,7 +114,7 @@ export async function activate(context: vscode.ExtensionContext) {
         log(`Warning: Tree-sitter init failed: ${error}. Parsing will be unavailable.`);
     }
 
-    const config = vscode.workspace.getConfiguration('codag');
+    const config = vscode.workspace.getConfiguration('archbtl');
     const apiUrl = config.get<string>('apiUrl', 'http://localhost:52104');
 
     log(`Backend API URL: ${apiUrl}`);
@@ -255,7 +255,7 @@ export async function activate(context: vscode.ExtensionContext) {
     log('Extension activated successfully');
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('codag.refresh', async () => {
+        vscode.commands.registerCommand('archbtl.refresh', async () => {
             // Confirm before clearing cache
             const confirm = await vscode.window.showWarningMessage(
                 'This will clear all cached analysis and reanalyze the entire workspace. Continue?',
@@ -278,7 +278,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Clear cache for specific files and reanalyze them
     context.subscriptions.push(
-        vscode.commands.registerCommand('codag.clearCacheAndReanalyze', async (paths: string[]) => {
+        vscode.commands.registerCommand('archbtl.clearCacheAndReanalyze', async (paths: string[]) => {
             if (!paths || paths.length === 0) {
                 vscode.window.showWarningMessage('No files selected to clear cache.');
                 return;
@@ -308,14 +308,14 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('codag.open', async () => {
+        vscode.commands.registerCommand('archbtl.open', async () => {
             await analyzeWorkspace(workspaceCtx, false);
         })
     );
 
     // Show file picker without re-rendering graph (used from within webview)
     context.subscriptions.push(
-        vscode.commands.registerCommand('codag.showFilePicker', async () => {
+        vscode.commands.registerCommand('archbtl.showFilePicker', async () => {
             log('Opening file picker (preserving current graph)...');
             webview.showLoading('Loading file tree...');
 
