@@ -1,0 +1,7 @@
+
+# Codag cache directory
+.codag-cache/
+
+# Test/dev scripts
+scripts/
+_test_*.ts

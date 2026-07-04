@@ -1,0 +1,14 @@
+src/**
+tsconfig.json
+node_modules/**
+.gitignore
+.github/**
+**/*.ts
+!out/**
+out/**/*.map
+.vscode/**
+.env*
+*.log
+*.pid
+media/icon-chat-old.png
+!media/tree-sitter/**

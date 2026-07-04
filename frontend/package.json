@@ -1,0 +1,93 @@
+{
+  "name": "codag",
+  "displayName": "Codag - Visualize LLM Workflows",
+  "description": "Visualize AI/LLM workflows in your codebase",
+  "version": "0.2.5",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/michaelzixizhou/codag"
+  },
+  "bugs": {
+    "url": "https://github.com/michaelzixizhou/codag/issues"
+  },
+  "homepage": "https://github.com/michaelzixizhou/codag#readme",
+  "publisher": "codag",
+  "icon": "media/icon-chat.png",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Visualization",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "llm",
+    "ai",
+    "workflow",
+    "visualization",
+    "dag",
+    "langchain",
+    "openai",
+    "anthropic",
+    "gemini",
+    "agent"
+  ],
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onCommand:codag.open"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codag.open",
+        "title": "Codag: Open"
+      }
+    ],
+    "configuration": {
+      "title": "Codag",
+      "properties": {
+        "codag.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:52104",
+          "description": "Backend API URL"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "copy-wasm": "node scripts/copy-wasm.js",
+    "package": "npm run copy-wasm && npm run package:extension && npm run package:webview && npm run package:mcp",
+    "package:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --format=cjs --platform=node --target=es2020 --external:vscode --minify",
+    "package:webview": "esbuild src/webview-client/main.ts --bundle --outfile=out/webview-client/main.js --format=iife --target=es2020 --minify",
+    "package:mcp": "esbuild ../packages/mcp-server/src/index.ts --bundle --outfile=out/mcp-server.js --format=esm --platform=node --target=es2022 --banner:js=\"#!/usr/bin/env node\" --minify",
+    "compile": "npm run copy-wasm && npm run compile:extension && npm run compile:webview && npm run compile:mcp",
+    "compile:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --format=cjs --platform=node --target=es2020 --external:vscode --sourcemap",
+    "compile:webview": "esbuild src/webview-client/main.ts --bundle --outfile=out/webview-client/main.js --format=iife --target=es2020 --sourcemap",
+    "compile:mcp": "esbuild ../packages/mcp-server/src/index.ts --bundle --outfile=out/mcp-server.js --format=esm --platform=node --target=es2022 --banner:js=\"#!/usr/bin/env node\"",
+    "watch": "concurrently \"npm run watch:extension\" \"npm run watch:webview\"",
+    "watch:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --format=cjs --platform=node --target=es2020 --external:vscode --sourcemap --watch",
+    "watch:webview": "esbuild src/webview-client/main.ts --bundle --outfile=out/webview-client/main.js --format=iife --target=es2020 --sourcemap --watch"
+  },
+  "devDependencies": {
+    "@types/dagre": "^0.7.52",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.95.0",
+    "concurrently": "^8.2.0",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dagre": "^0.8.5",
+    "elkjs": "^0.11.0",
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "^0.25.10"
+  }
+}

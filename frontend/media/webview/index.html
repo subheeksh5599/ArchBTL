@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}'; img-src {{cspSource}} data: blob:; font-src {{cspSource}};">
+    <title>LLM Architecture</title>
+    <script nonce="{{nonce}}" src="{{d3Uri}}"></script>
+    <style>{{inlineStyles}}</style>
+</head>
+<body>
+    <div id="header">
+        <div class="header-left">
+            <svg class="codag-logo" viewBox="0 0 183.49023 48.22958" xmlns="http://www.w3.org/2000/svg">
+              <g transform="translate(-4.663109,-100.21196)">
+                <circle fill="currentColor" cx="12.989979" cy="136.37827" r="8.32687" />
+                <path fill="currentColor" d="m 23.348962,100.21197 c -1.884958,0 -3.402376,1.51742 -3.402376,3.40238 v 22.4131 c 0,1.88496 1.517418,3.40238 3.402376,3.40238 h 22.413103 c 1.884958,0 3.402376,-1.51742 3.402376,-3.40238 v -22.4131 c 0,-1.88496 -1.517418,-3.40238 -3.402376,-3.40238 z m 11.30267,6.39083 a 8.32687,8.32687 0 0 1 8.32714,8.32714 8.32687,8.32687 0 0 1 -8.32714,8.32662 8.32687,8.32687 0 0 1 -8.326624,-8.32662 8.32687,8.32687 0 0 1 8.326624,-8.32714 z" />
+                <path fill="currentColor" d="m 12.407616,130.60648 13.191254,-13.19125 6.269113,6.39971 -15.411566,15.41157 z" />
+                <text fill="currentColor" style="font-size:44.0158px;font-weight:bold;font-family:Damascus,system-ui,-apple-system,sans-serif" x="55.822399" y="131.09103" transform="scale(0.94435948,1.0589188)">codag</text>
+              </g>
+            </svg>
+            <div id="snapshot" class="snapshot-stats">
+                <span class="stat-label"><span id="statWorkflows">0</span> workflows</span>
+                <span class="stat-divider">·</span>
+                <span class="stat-label"><span id="statLlmCalls">0</span> LLM nodes</span>
+                <span class="stat-divider">·</span>
+                <span class="stat-label">Last updated at <span id="statTimestamp">--:--</span></span>
+            </div>
+        </div>
+        <div id="controls">
+            <button id="btn-zoom-in" title="Zoom In">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </button>
+            <button id="btn-zoom-out" title="Zoom Out">
+                <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+            </button>
+            <button id="btn-fit-screen" title="Fit to Screen">
+                <svg viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3V3zm18 0v6h-2V5h-4V3h6zM3 15v6h6v-2H5v-4H3zm16 0v4h-4v2h6v-6h-2z"/></svg>
+            </button>
+            <button id="btn-analyze" class="analyze-btn" title="Analyze Files">
+                <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            </button>
+            <button id="btn-export" class="export-btn" title="Export as PNG">
+                <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="graph"></div>
+
+    <div id="backendError" class="error-overlay" style="display: none;">
+        <div class="error-overlay-card">
+            <div class="error-overlay-icon error-overlay-icon--error">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h2 class="error-overlay-title">Backend not running</h2>
+            <p class="error-overlay-desc">The Codag backend server is not reachable. This can happen if the server isn't started, or if the <code>GEMINI_API_KEY</code> is missing from <code>backend/.env</code>.</p>
+            <div class="error-overlay-steps">
+                <div class="error-overlay-step">
+                    <span class="error-overlay-step-num">1</span>
+                    <span>Make sure <code>backend/.env</code> contains your API key:</span>
+                </div>
+                <code class="error-overlay-code">GEMINI_API_KEY=your-key-here</code>
+                <div class="error-overlay-step">
+                    <span class="error-overlay-step-num">2</span>
+                    <span>Start the backend server:</span>
+                </div>
+                <div class="error-overlay-commands">
+                    <code class="error-overlay-code">make run</code>
+                    <span class="error-overlay-or">or</span>
+                    <code class="error-overlay-code">docker compose up -d</code>
+                </div>
+            </div>
+            <p class="error-overlay-hint">The backend runs on <code>localhost:52104</code> by default. Change it in Settings &gt; Codag: API URL.</p>
+            <button id="btn-retry-backend" class="error-overlay-btn">Retry</button>
+        </div>
+    </div>
+
+    <div id="apiKeyError" class="error-overlay" style="display: none;">
+        <div class="error-overlay-card">
+            <div class="error-overlay-icon error-overlay-icon--key">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M15 7a4 4 0 0 1-4 4H5m0 0V7m0 4l6.5 6.5M21 3l-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h2 class="error-overlay-title">Invalid Gemini API key</h2>
+            <p class="error-overlay-desc">The Gemini API rejected the request. Your API key may be invalid or expired.</p>
+            <div class="error-overlay-steps">
+                <div class="error-overlay-step">
+                    <span class="error-overlay-step-num">1</span>
+                    <span>Get a free key at <a href="https://aistudio.google.com/apikey" class="error-overlay-link">aistudio.google.com/apikey</a></span>
+                </div>
+                <div class="error-overlay-step">
+                    <span class="error-overlay-step-num">2</span>
+                    <span>Update <code>backend/.env</code>:</span>
+                </div>
+                <code class="error-overlay-code">GEMINI_API_KEY=your-new-key-here</code>
+                <div class="error-overlay-step">
+                    <span class="error-overlay-step-num">3</span>
+                    <span>Restart the backend:</span>
+                </div>
+                <code class="error-overlay-code">make stop && make run</code>
+            </div>
+            <button id="btn-retry-apikey" class="error-overlay-btn">Retry</button>
+        </div>
+    </div>
+
+    <div id="workflowDirectory" class="workflow-directory">
+        <div class="directory-header">
+            <span class="directory-title">Workflow Directory</span>
+            <button id="btn-toggle-directory" class="directory-toggle">▼</button>
+        </div>
+        <div class="directory-scroll-container">
+            <div class="scroll-indicator scroll-indicator-top">▲</div>
+            <div id="directoryList" class="directory-list"></div>
+            <div class="scroll-indicator scroll-indicator-bottom">▼</div>
+        </div>
+    </div>
+
+    <div id="buttonTooltip" class="button-tooltip"></div>
+
+    <div id="minimap"></div>
+
+    <div id="edgeTooltip" class="edge-tooltip" style="display: none;"></div>
+
+    <!-- Notification queue (slide-up stack) -->
+    <div id="notificationQueue" class="notification-queue"></div>
+
+    <div id="progressOverlay" class="progress-overlay" style="display: none;">
+        <div class="overlay-content">
+            <div class="overlay-spinner">⟳</div>
+            <div class="overlay-text">Processing...</div>
+        </div>
+    </div>
+
+    <div id="sidePanel" class="side-panel">
+        <div class="panel-header">
+            <div class="panel-header-left">
+                <h2 id="panelTitle">Node Details</h2>
+                <p id="panelWorkflow" class="panel-workflow"></p>
+            </div>
+            <button class="close-btn" id="btn-close-panel">&times;</button>
+        </div>
+        <div class="panel-content">
+            <div class="panel-section">
+                <label>Type</label>
+                <div id="panelType" class="type-badge">-</div>
+            </div>
+            <div id="descriptionSection" class="panel-section">
+                <label>Description</label>
+                <p id="panelDescription">-</p>
+            </div>
+            <div id="sourceSection" class="panel-section">
+                <label>Source Location</label>
+                <a id="panelSource" class="source-link" href="#">-</a>
+            </div>
+            <div id="referenceSection" class="panel-section" style="display: none;"></div>
+            <div id="incomingSection" class="panel-section">
+                <label>Incoming Data</label>
+                <div id="panelIncoming">-</div>
+            </div>
+            <div id="outgoingSection" class="panel-section">
+                <label>Outgoing Data</label>
+                <div id="panelOutgoing">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Tutorial -->
+    <div id="tutorialOverlay" class="tutorial-overlay" style="display: none;">
+        <div class="tutorial-panel">
+            <div class="tutorial-content" id="tutorialContent">
+                <!-- Content injected by JS -->
+            </div>
+            <div class="tutorial-footer">
+                <div class="tutorial-dots" id="tutorialDots">
+                    <!-- Dots injected by JS -->
+                </div>
+                <div class="tutorial-nav">
+                    <button id="tutorialPrev" class="tutorial-btn tutorial-btn-secondary">Back</button>
+                    <button id="tutorialNext" class="tutorial-btn tutorial-btn-primary">Next</button>
+                </div>
+            </div>
+            <button id="tutorialSkip" class="tutorial-skip">Skip tutorial</button>
+        </div>
+    </div>
+
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+# Environment variables
+.env
+*.env
+!.env.example
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+
+# Node.js / Frontend
+node_modules/
+out/
+dist/
+*.vsix
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs and runtime files
+*.log
+*.pid
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# IDEs
+.vscode/
+.vscode-dev/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Build artifacts
+frontend/media/tree-sitter/
+
+# Cache directories
+.codag-cache/
+.cache/
+
+# Benchmark/dev tools
+backend/benchmark/
+
+# Launch planning (private)
+drafts/

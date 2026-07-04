@@ -1,0 +1,160 @@
+import * as vscode from 'vscode';
+import { staticAnalyzer, FileAnalysis, CodeLocation } from './static-analyzer';
+import { FileMetadata, LocationMetadata } from './types';
+
+// Re-export for backwards compatibility
+export { FileMetadata, LocationMetadata };
+
+export class MetadataBuilder {
+    /**
+     * Build metadata for all workflow files
+     * Includes cross-file dependency tracking
+     */
+    async buildMetadata(workflowFiles: vscode.Uri[]): Promise<FileMetadata[]> {
+        const analyses: Map<string, FileAnalysis> = new Map();
+
+        // First pass: Analyze all files
+        for (const uri of workflowFiles) {
+            try {
+                const content = await vscode.workspace.fs.readFile(uri);
+                const code = Buffer.from(content).toString('utf8');
+                const analysis = staticAnalyzer.analyze(code, uri.fsPath);
+                analyses.set(uri.fsPath, analysis);
+            } catch (error) {
+                // Skip files that fail to analyze
+            }
+        }
+
+        // Second pass: Build dependency graph
+        const metadata: FileMetadata[] = [];
+        for (const [filePath, analysis] of analyses.entries()) {
+            const relatedFiles = this.findRelatedFiles(analysis, analyses);
+
+            // Deduplicate locations by line+type
+            const uniqueLocations = this.deduplicateLocations(analysis.locations);
+
+            metadata.push({
+                file: filePath,
+                locations: uniqueLocations.map(loc => ({
+                    line: loc.line,
+                    type: loc.type,
+                    description: loc.description,
+                    function: loc.function,
+                    variable: loc.variable
+                })),
+                relatedFiles
+            });
+        }
+
+        return metadata;
+    }
+
+    /**
+     * Find files related through imports/exports
+     */
+    private findRelatedFiles(
+        analysis: FileAnalysis,
+        allAnalyses: Map<string, FileAnalysis>
+    ): string[] {
+        const related = new Set<string>();
+
+        // Check imports - find files that export what we import
+        for (const importPath of analysis.imports) {
+            for (const [filePath, otherAnalysis] of allAnalyses.entries()) {
+                if (filePath === analysis.filePath) continue;
+
+                // Match by relative import path or file name
+                if (filePath.includes(importPath) || importPath.includes(filePath.split('/').pop() || '')) {
+                    related.add(filePath);
+                }
+            }
+        }
+
+        // Check exports - find files that import from us
+        if (analysis.exports.length > 0) {
+            for (const [filePath, otherAnalysis] of allAnalyses.entries()) {
+                if (filePath === analysis.filePath) continue;
+
+                // If other file imports something we export
+                const ourFileName = analysis.filePath.split('/').pop()?.replace(/\.(ts|tsx|js|jsx)$/, '');
+                if (ourFileName && otherAnalysis.imports.some(imp => imp.includes(ourFileName))) {
+                    related.add(filePath);
+                }
+            }
+        }
+
+        return Array.from(related);
+    }
+
+    /**
+     * Build metadata for a single file
+     */
+    async buildSingleFileMetadata(uri: vscode.Uri): Promise<FileMetadata> {
+        try {
+            const content = await vscode.workspace.fs.readFile(uri);
+            const code = Buffer.from(content).toString('utf8');
+            const analysis = staticAnalyzer.analyze(code, uri.fsPath);
+
+            // Deduplicate locations by line+type
+            const uniqueLocations = this.deduplicateLocations(analysis.locations);
+
+            return {
+                file: uri.fsPath,
+                locations: uniqueLocations.map(loc => ({
+                    line: loc.line,
+                    type: loc.type,
+                    description: loc.description,
+                    function: loc.function,
+                    variable: loc.variable
+                })),
+                relatedFiles: []
+            };
+        } catch (error) {
+            return {
+                file: uri.fsPath,
+                locations: [],
+                relatedFiles: []
+            };
+        }
+    }
+
+    /**
+     * Deduplicate locations by (line, type) key
+     * Keeps first occurrence of each unique location
+     */
+    private deduplicateLocations(locations: CodeLocation[]): CodeLocation[] {
+        const seen = new Map<string, CodeLocation>();
+
+        for (const loc of locations) {
+            const key = `${loc.line}-${loc.type}`;
+            if (!seen.has(key)) {
+                seen.set(key, loc);
+            }
+        }
+
+        return Array.from(seen.values());
+    }
+
+    /**
+     * Enhance code with location markers for Gemini
+     */
+    addLocationMarkers(code: string, metadata: FileMetadata): string {
+        const lines = code.split('\n');
+        const result: string[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const lineNum = i + 1;
+            const location = metadata.locations.find(loc => loc.line === lineNum);
+
+            if (location) {
+                result.push(`/* [${location.type.toUpperCase()}] ${location.description} in ${location.function}() */`);
+            }
+
+            result.push(lines[i]);
+        }
+
+        return result.join('\n');
+    }
+}
+
+export const metadataBuilder = new MetadataBuilder();
